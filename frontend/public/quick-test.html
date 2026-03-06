@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Quick Login Test</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .box {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 15px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0052a3;
+        }
+
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #0066cc;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .success {
+            border-left-color: green;
+            background: #e8f5e9;
+        }
+
+        .error {
+            border-left-color: red;
+            background: #ffebee;
+        }
+
+        #logs {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TestTrack Pro - Quick Login Debug</h1>
+
+    <div class="box">
+        <button onclick="testLogin()">1. Test Login</button>
+        <button onclick="testGetUser()">2. Test /users/me (after login)</button>
+        <button onclick="checkHeaders()">3. Check What Headers Are Sent</button>
+        <button onclick="goToDashboard()">4. Go to Dashboard</button>
+    </div>
+
+    <div class="box">
+        <h3>Debug Log:</h3>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001/api';
+
+        function log(msg, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'log' + (isError ? ' error' : ' success');
+            div.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+            document.getElementById('logs').appendChild(div);
+            document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight;
+            console.log(msg);
+        }
+
+        async function testLogin() {
+            document.getElementById('logs').innerHTML = '';
+            log('Starting login test...');
+
+            try {
+                const resp = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@testtrack.com',
+                        password: 'Admin@123'
+                    })
+                });
+
+                log(`Login response: ${resp.status} ${resp.statusText}`);
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    localStorage.setItem('access_token', data.access_token);
+                    log('Token saved to localStorage');
+                    log('Token: ' + data.access_token.substring(0, 50) + '...');
+                } else {
+                    log('Login failed: ' + data.detail, true);
+                }
+            } catch (e) {
+                log('Error: ' + e.message, true);
+            }
+        }
+
+        async function testGetUser() {
+            log('Getting token from localStorage...');
+            const token = localStorage.getItem('access_token');
+
+            if (!token) {
+                log('No token found!', true);
+                return;
+            }
+
+            log('Token found: ' + token.substring(0, 50) + '...');
+            log('Calling /users/me with Bearer token...');
+
+            try {
+                const resp = await fetch(`${API_BASE}/users/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                log(`/users/me response: ${resp.status} ${resp.statusText}`);
+
+                if (resp.ok) {
+                    const user = await resp.json();
+                    log('User data: ' + JSON.stringify(user));
+                } else {
+                    const err = await resp.json();
+                    log('Error response: ' + JSON.stringify(err), true);
+                }
+            } catch (e) {
+                log('Fetch error: ' + e.message, true);
+            }
+        }
+
+        async function checkHeaders() {
+            log('Testing what headers backend receives...');
+            const token = localStorage.getItem('access_token');
+
+            try {
+                const resp = await fetch(`${API_BASE}/debug/request-info`);
+                if (resp.ok) {
+                    const info = await resp.json();
+                    log('Backend received: ' + JSON.stringify(info.headers, null, 2));
+                }
+            } catch (e) {
+                log('Error: ' + e.message, true);
+            }
+        }
+
+        function goToDashboard() {
+            log('Redirecting to dashboard...');
+            setTimeout(() => { window.location.href = '/dashboard'; }, 500);
+        }
+
+        window.addEventListener('load', () => {
+            log('Page loaded. Ready to test.');
+        });
+    </script>
+</body>
+
+</html>

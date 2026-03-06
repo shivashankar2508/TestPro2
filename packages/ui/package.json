@@ -1,0 +1,15 @@
+{
+    "name": "@testtrack-pro/ui",
+    "version": "1.0.0",
+    "description": "Shared UI components for TestTrack Pro",
+    "private": true,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "test": "vitest",
+        "test:ui": "vitest --ui"
+    },
+    "dependencies": {},
+    "devDependencies": {}
+}

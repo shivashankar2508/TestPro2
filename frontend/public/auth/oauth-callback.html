@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing OAuth Login - TestTrack Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 20px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .redirect-message {
+            font-size: 12px;
+            margin-top: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h1>Processing Login</h1>
+        <p>Completing your OAuth authentication...</p>
+        <div id="status"></div>
+        <div class="redirect-message">Redirecting in <span id="countdown">5</span> seconds...</div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+
+        async function handleOAuthCallback() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const state = params.get('state');
+            const provider = localStorage.getItem('oauth_provider') || 'unknown';
+
+            // Show info message
+            showStatus('Authenticating with ' + provider + '...', 'info');
+
+            if (!code || !state) {
+                showStatus('❌ Invalid callback parameters. Redirecting...', 'error');
+                redirectToLogin('Invalid OAuth callback');
+                return;
+            }
+
+            try {
+                let response;
+                const API_URL = 'http://localhost:8000/api';
+
+                if (provider === 'google') {
+                    response = await fetch(`${API_URL}/auth/oauth/google/callback`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            code,
+                            state,
+                            redirect_uri: window.location.origin + window.location.pathname
+                        })
+                    });
+                } else if (provider === 'github') {
+                    response = await fetch(`${API_URL}/auth/oauth/github/callback`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            code,
+                            state,
+                            redirect_uri: window.location.origin + window.location.pathname
+                        })
+                    });
+                } else {
+                    showStatus('❌ Unknown OAuth provider', 'error');
+                    redirectToLogin('Unknown provider');
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store tokens
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    localStorage.setItem('user_id', data.id);
+                    localStorage.setItem('user_email', data.email);
+                    localStorage.setItem('user_role', data.role);
+
+                    // Clear session storage
+                    sessionStorage.removeItem('oauth_provider');
+
+                    showStatus(`✅ Welcome, ${data.full_name}! Redirecting to dashboard...`, 'success');
+                    await redirectToDashboard();
+                } else {
+                    showStatus(`❌ Authentication failed: ${data.detail || 'Unknown error'}`, 'error');
+                    redirectToLogin(data.detail || 'Authentication failed');
+                }
+            } catch (error) {
+                console.error('OAuth callback error:', error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                redirectToLogin(error.message);
+            }
+        }
+
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        async function redirectToDashboard() {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            window.location.href = '/dashboard';
+        }
+
+        function redirectToLogin(reason) {
+            let countdown = 5;
+            const countdownEl = document.getElementById('countdown');
+
+            const interval = setInterval(() => {
+                countdown--;
+                countdownEl.textContent = countdown;
+
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    window.location.href = `/login?error=${encodeURIComponent(reason)}`;
+                }
+            }, 1000);
+        }
+
+        // Start the process when page loads
+        handleOAuthCallback();
+    </script>
+</body>
+
+</html>

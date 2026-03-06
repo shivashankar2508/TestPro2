@@ -1,0 +1,484 @@
+/* ============ Global Auth Styles ============ */
+:root {
+    --primary-color: #0066cc;
+    --primary-dark: #0052a3;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+
+    --bg-light: #f8f9fa;
+    --bg-white: #ffffff;
+    --text-dark: #333333;
+    --text-gray: #666666;
+    --border-gray: #e0e0e0;
+
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============ Auth Container ============ */
+.auth-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 1000px;
+    width: 100%;
+    margin: 20px;
+    gap: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.auth-box {
+    background-color: var(--bg-white);
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.auth-side {
+    background: linear-gradient(135deg, var(--primary-color), #0052a3);
+    padding: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.side-content {
+    text-align: center;
+}
+
+.side-content h2 {
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 16px;
+}
+
+.side-content p {
+    font-size: 18px;
+    margin-bottom: 32px;
+    opacity: 0.9;
+    line-height: 1.6;
+}
+
+.features-list {
+    text-align: left;
+}
+
+.feature {
+    padding: 12px 0;
+    font-size: 16px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ============ Auth Header ============ */
+.auth-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.logo {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.auth-header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.auth-header p {
+    font-size: 18px;
+    color: var(--text-gray);
+}
+
+/* ============ Auth Form ============ */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group select {
+    padding: 12px 16px;
+    border: 2px solid var(--border-gray);
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    transition: var(--transition);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.password-input {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.password-input input {
+    width: 100%;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 8px;
+}
+
+.password-requirements {
+    margin: 12px 0;
+    padding: 12px;
+    background-color: var(--bg-light);
+    border-radius: 8px;
+    display: none;
+}
+
+.password-requirements.show {
+    display: block;
+}
+
+.password-requirements p {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-gray);
+    margin-bottom: 8px;
+}
+
+.requirement {
+    font-size: 12px;
+    color: var(--text-gray);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.requirement-icon {
+    font-weight: bold;
+    color: var(--danger-color);
+}
+
+.requirement.met .requirement-icon {
+    color: var(--success-color);
+}
+
+/* ============ Form Options ============ */
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.remember-me input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.forgot-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.forgot-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* ============ Checkbox ============ */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-gray);
+}
+
+.checkbox-label input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.checkbox-label a:hover {
+    text-decoration: underline;
+}
+
+/* ============ Buttons ============ */
+.btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-block {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+}
+
+/* ============ OAuth Buttons ============ */
+.auth-divider {
+    text-align: center;
+    margin: 20px 0;
+    font-size: 14px;
+    color: var(--text-gray);
+    position: relative;
+}
+
+.auth-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background-color: var(--border-gray);
+    z-index: -1;
+}
+
+.auth-divider span {
+    background-color: var(--bg-white);
+    padding: 0 12px;
+}
+
+.oauth-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.oauth-btn {
+    padding: 12px;
+    border: 2px solid var(--border-gray);
+    border-radius: 8px;
+    background-color: var(--bg-white);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.oauth-btn:hover {
+    border-color: var(--primary-color);
+    background-color: var(--bg-light);
+    transform: translateY(-2px);
+}
+
+.oauth-btn span {
+    font-size: 20px;
+}
+
+.github-btn:hover {
+    color: #333;
+}
+
+.google-btn:hover {
+    color: #ea4335;
+}
+
+/* ============ Messages ============ */
+.error-message {
+    font-size: 12px;
+    color: var(--danger-color);
+    display: none;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.success-message {
+    padding: 12px 16px;
+    background-color: #d4edda;
+    color: #155724;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+    display: none;
+    border: 1px solid #c3e6cb;
+}
+
+.success-message.show {
+    display: block;
+}
+
+/* ============ Auth Footer ============ */
+.auth-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--text-gray);
+}
+
+.auth-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+    color: var(--primary-dark);
+}
+
+/* ============ Security Info ============ */
+.security-info {
+    text-align: center;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-gray);
+    font-size: 14px;
+    color: var(--text-gray);
+}
+
+.security-info p {
+    margin: 0;
+}
+
+/* ============ Responsive Design ============ */
+@media (max-width: 768px) {
+    .auth-container {
+        grid-template-columns: 1fr;
+        margin: 10px;
+    }
+
+    .auth-side {
+        display: none;
+    }
+
+    .auth-box {
+        padding: 40px 20px;
+    }
+
+    .auth-header h1 {
+        font-size: 28px;
+    }
+
+    .oauth-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-box {
+        padding: 30px 16px;
+    }
+
+    .auth-header {
+        margin-bottom: 30px;
+    }
+
+    .logo {
+        font-size: 40px;
+        margin-bottom: 12px;
+    }
+
+    .auth-header h1 {
+        font-size: 24px;
+    }
+
+    .auth-header p {
+        font-size: 14px;
+    }
+
+    .auth-form {
+        gap: 16px;
+    }
+
+    .form-options {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - TestTrack Pro</title>
+    <link rel="stylesheet" href="../styles/auth.css">
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="logo">🧪</div>
+                <h1>TestTrack Pro</h1>
+                <p>Create Your Account</p>
+            </div>
+
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" name="fullName" placeholder="John Doe" required>
+                    <span class="error-message" id="fullNameError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="your.email@company.com" required>
+                    <span class="error-message" id="emailError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="johndoe123" required>
+                    <span class="error-message" id="usernameError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" required>
+                        <option value="tester" selected>Tester</option>
+                        <option value="developer">Developer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <span class="error-message" id="roleError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-input">
+                        <input type="password" id="password" name="password" placeholder="Enter a strong password"
+                            required>
+                        <button type="button" class="toggle-password">👁️</button>
+                    </div>
+                    <div class="password-requirements">
+                        <p>Password must contain:</p>
+                        <div class="requirement" id="req-length">
+                            <span class="requirement-icon">✗</span>
+                            At least 8 characters
+                        </div>
+                        <div class="requirement" id="req-uppercase">
+                            <span class="requirement-icon">✗</span>
+                            One uppercase letter (A-Z)
+                        </div>
+                        <div class="requirement" id="req-lowercase">
+                            <span class="requirement-icon">✗</span>
+                            One lowercase letter (a-z)
+                        </div>
+                        <div class="requirement" id="req-number">
+                            <span class="requirement-icon">✗</span>
+                            One number (0-9)
+                        </div>
+                        <div class="requirement" id="req-special">
+                            <span class="requirement-icon">✗</span>
+                            One special character (!@#$%^&*)
+                        </div>
+                    </div>
+                    <span class="error-message" id="passwordError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <span>I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#"
+                                target="_blank">Privacy Policy</a></span>
+                    </label>
+                    <span class="error-message" id="termsError"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+
+                <div class="error-message" id="formError" style="margin-top: 16px; display: none;"></div>
+                <div class="success-message" id="formSuccess" style="margin-top: 16px; display: none;"></div>
+            </form>
+
+            <div class="auth-divider">
+                <span>or sign up with</span>
+            </div>
+
+            <div class="oauth-buttons">
+                <button type="button" class="oauth-btn github-btn">
+                    <span>🐙</span> GitHub
+                </button>
+                <button type="button" class="oauth-btn google-btn">
+                    <span>🔍</span> Google
+                </button>
+            </div>
+
+            <div class="auth-footer">
+                <p>Already have an account?
+                    <a href="/login" class="auth-link">Sign in here</a>
+                </p>
+            </div>
+
+            <div class="security-info">
+                <p>🔒 Your data is encrypted and secure</p>
+            </div>
+        </div>
+
+        <div class="auth-side">
+            <div class="side-content">
+                <h2>Join Our Community</h2>
+                <p>Start managing your test cases professionally today.</p>
+                <div class="features-list">
+                    <div class="feature">✓ Free account creation</div>
+                    <div class="feature">✓ Full-featured platform</div>
+                    <div class="feature">✓ Collaborate with your team</div>
+                    <div class="feature">✓ 24/7 support</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/oauth.js"></script>
+    <script>
+        // Store provider on button click for OAuth flow
+        document.querySelectorAll('.google-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                sessionStorage.setItem('oauth_provider', 'google');
+            });
+        });
+        document.querySelectorAll('.github-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                sessionStorage.setItem('oauth_provider', 'github');
+            });
+        });
+    </script>
+</body>
+
+</html>

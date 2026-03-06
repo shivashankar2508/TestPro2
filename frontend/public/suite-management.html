@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Suite Management - TestTrack Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filters select {
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .suite-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .suite-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .suite-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .suite-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .suite-title {
+            flex: 1;
+        }
+
+        .suite-title h3 {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+
+        .suite-title h3:hover {
+            color: #667eea;
+        }
+
+        .suite-id {
+            color: #6b7280;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .suite-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .suite-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            color: #1f2937;
+            font-weight: 500;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-draft {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .badge-archived {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .badge-sequential {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-parallel {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .suite-description {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .test-cases-preview {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .test-cases-preview h4 {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 10px;
+        }
+
+        .test-case-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .test-case-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .test-case-item .title {
+            flex: 1;
+            color: #374151;
+        }
+
+        .test-case-item .order {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            color: #1f2937;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .close-btn:hover {
+            color: #1f2937;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state img {
+            width: 200px;
+            opacity: 0.5;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notification.show {
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+        }
+
+        .drag-handle {
+            cursor: move;
+            color: #9ca3af;
+            font-size: 18px;
+        }
+
+        .hierarchy-indent {
+            margin-left: 30px;
+            border-left: 2px solid #e5e7eb;
+            padding-left: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🧪 Test Suite Management</h1>
+                <p style="opacity: 0.9; margin-top: 5px;">Organize and execute your test cases efficiently</p>
+            </div>
+            <div class="header-actions">
+                <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+                <button class="btn btn-primary" onclick="openCreateSuiteModal()">+ Create Suite</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Stats Grid -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <h3>Total Suites</h3>
+                    <div class="value" id="totalSuites">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Active Suites</h3>
+                    <div class="value" id="activeSuites">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Test Cases</h3>
+                    <div class="value" id="totalTests">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Recent Executions</h3>
+                    <div class="value" id="recentExecutions">0</div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search suites..." onkeyup="filterSuites()">
+                </div>
+                <div class="filters">
+                    <select id="statusFilter" onchange="filterSuites()">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="draft">Draft</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                    <select id="moduleFilter" onchange="filterSuites()">
+                        <option value="">All Modules</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" onclick="loadSuites()">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- Suites Grid -->
+            <div id="suitesContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading suites...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Suite Modal -->
+    <div id="suiteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create Test Suite</h2>
+                <button class="close-btn" onclick="closeSuiteModal()">&times;</button>
+            </div>
+            <form id="suiteForm" onsubmit="saveSuite(event)">
+                <div class="form-group">
+                    <label>Suite Name *</label>
+                    <input type="text" id="suiteName" required placeholder="e.g., User Authentication Suite">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="suiteDescription" placeholder="Describe the purpose of this test suite..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Module</label>
+                    <input type="text" id="suiteModule" placeholder="e.g., Authentication, Payments, etc.">
+                </div>
+                <div class="form-group">
+                    <label>Parent Suite (Optional)</label>
+                    <select id="parentSuiteId">
+                        <option value="">None (Root Level)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Execution Mode</label>
+                    <select id="executionMode">
+                        <option value="sequential">Sequential</option>
+                        <option value="parallel">Parallel</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="suiteStatus">
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeSuiteModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Suite</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Test Cases Modal -->
+    <div id="addTestCasesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Test Cases to Suite</h2>
+                <button class="close-btn" onclick="closeAddTestCasesModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Select Test Cases</label>
+                <div class="checkbox-group" id="testCasesList">
+                    <div class="loading">Loading test cases...</div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeAddTestCasesModal()">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="addTestCasesToSuite()">Add Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suite Detail Modal -->
+    <div id="suiteDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 id="detailSuiteName">Suite Details</h2>
+                <button class="close-btn" onclick="closeSuiteDetailModal()">&times;</button>
+            </div>
+            <div id="suiteDetailContent">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <span id="notificationMessage"></span>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let allSuites = [];
+        let allTestCases = [];
+        let currentSuiteId = null;
+        let editingSuiteId = null;
+
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSuites();
+            loadTestCases();
+        });
+
+        async function loadSuites() {
+            try {
+                const response = await API.apiCall('/api/test-suites/', 'GET');
+                allSuites = response;
+                displaySuites(allSuites);
+                updateStats();
+                populateModuleFilter();
+                populateParentSuiteOptions();
+            } catch (error) {
+                console.error('Error loading suites:', error);
+                showNotification('Failed to load test suites', 'error');
+                document.getElementById('suitesContainer').innerHTML = '<div class="empty-state"><h3>Error loading suites</h3><p>Please try refreshing the page</p></div>';
+            }
+        }
+
+        async function loadTestCases() {
+            try {
+                const response = await API.apiCall('/api/test-cases/', 'GET');
+                allTestCases = response;
+            } catch (error) {
+                console.error('Error loading test cases:', error);
+            }
+        }
+
+        function displaySuites(suites) {
+            const container = document.getElementById('suitesContainer');
+
+            if (suites.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No Test Suites Yet</h3>
+                        <p>Create your first test suite to organize your test cases</p>
+                        <button class="btn btn-primary" onclick="openCreateSuiteModal()">+ Create Suite</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const suitesHTML = suites.map(suite => `
+                <div class="suite-card">
+                    <div class="suite-header">
+                        <div class="suite-title">
+                            <h3 onclick="viewSuiteDetails(${suite.id})">${suite.name}</h3>
+                            <span class="suite-id">${suite.suite_id}</span>
+                        </div>
+                        <div class="suite-actions">
+                            <button class="btn btn-success btn-sm" onclick="executeSuite(${suite.id})" title="Execute Suite">▶️</button>
+                            <button class="btn btn-primary btn-sm" onclick="openAddTestCasesModal(${suite.id})" title="Add Test Cases">+ Tests</button>
+                            <button class="btn btn-secondary btn-sm" onclick="editSuite(${suite.id})" title="Edit">✏️</button>
+                            <button class="btn btn-warning btn-sm" onclick="cloneSuite(${suite.id})" title="Clone">📋</button>
+                            ${suite.status !== 'archived'
+                    ? `<button class="btn btn-warning btn-sm" onclick="archiveSuite(${suite.id})" title="Archive">📦</button>`
+                    : `<button class="btn btn-success btn-sm" onclick="restoreSuite(${suite.id})" title="Restore">↩️</button>`
+                }
+                            <button class="btn btn-danger btn-sm" onclick="deleteSuite(${suite.id})" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="suite-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Status</span>
+                            <span class="meta-value"><span class="badge badge-${suite.status}">${suite.status.toUpperCase()}</span></span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Module</span>
+                            <span class="meta-value">${suite.module || 'General'}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Test Cases</span>
+                            <span class="meta-value">${suite.test_case_count || 0}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Execution</span>
+                            <span class="meta-value"><span class="badge badge-${suite.execution_mode}">${suite.execution_mode}</span></span>
+                        </div>
+                    </div>
+                    ${suite.description ? `<div class="suite-description">${suite.description}</div>` : ''}
+                </div>
+            `).join('');
+
+            container.innerHTML = `<div class="suite-grid">${suitesHTML}</div>`;
+        }
+
+        function updateStats() {
+            document.getElementById('totalSuites').textContent = allSuites.length;
+            document.getElementById('activeSuites').textContent = allSuites.filter(s => s.status === 'active').length;
+            document.getElementById('totalTests').textContent = allSuites.reduce((sum, s) => sum + (s.test_case_count || 0), 0);
+        }
+
+        function populateModuleFilter() {
+            const modules = [...new Set(allSuites.map(s => s.module).filter(Boolean))];
+            const filter = document.getElementById('moduleFilter');
+            filter.innerHTML = '<option value="">All Modules</option>' +
+                modules.map(m => `<option value="${m}">${m}</option>`).join('');
+        }
+
+        function populateParentSuiteOptions() {
+            const select = document.getElementById('parentSuiteId');
+            const activeSuites = allSuites.filter(s => s.status !== 'archived');
+            select.innerHTML = '<option value="">None (Root Level)</option>' +
+                activeSuites.map(s => `<option value="${s.id}">${s.name} (${s.suite_id})</option>`).join('');
+        }
+
+        function filterSuites() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const moduleFilter = document.getElementById('moduleFilter').value;
+
+            const filtered = allSuites.filter(suite => {
+                const matchesSearch = suite.name.toLowerCase().includes(searchTerm) ||
+                    suite.suite_id.toLowerCase().includes(searchTerm);
+                const matchesStatus = !statusFilter || suite.status === statusFilter;
+                const matchesModule = !moduleFilter || suite.module === moduleFilter;
+                return matchesSearch && matchesStatus && matchesModule;
+            });
+
+            displaySuites(filtered);
+        }
+
+        function openCreateSuiteModal() {
+            document.getElementById('modalTitle').textContent = 'Create Test Suite';
+            document.getElementById('suiteForm').reset();
+            editingSuiteId = null;
+            populateParentSuiteOptions();
+            document.getElementById('suiteModal').classList.add('active');
+        }
+
+        function closeSuiteModal() {
+            document.getElementById('suiteModal').classList.remove('active');
+        }
+
+        async function saveSuite(event) {
+            event.preventDefault();
+
+            const data = {
+                name: document.getElementById('suiteName').value,
+                description: document.getElementById('suiteDescription').value,
+                module: document.getElementById('suiteModule').value,
+                parent_suite_id: document.getElementById('parentSuiteId').value || null,
+                execution_mode: document.getElementById('executionMode').value,
+                status: document.getElementById('suiteStatus').value,
+                project_id: 1, // Default project
+                test_case_ids: []
+            };
+
+            try {
+                if (editingSuiteId) {
+                    await API.apiCall(`/api/test-suites/${editingSuiteId}`, 'PUT', data);
+                    showNotification('Suite updated successfully!', 'success');
+                } else {
+                    await API.apiCall('/api/test-suites/', 'POST', data);
+                    showNotification('Suite created successfully!', 'success');
+                }
+                closeSuiteModal();
+                loadSuites();
+            } catch (error) {
+                console.error('Error saving suite:', error);
+                showNotification('Failed to save suite', 'error');
+            }
+        }
+
+        async function editSuite(suiteId) {
+            try {
+                const suite = await API.apiCall(`/api/test-suites/${suiteId}`, 'GET');
+                document.getElementById('modalTitle').textContent = 'Edit Test Suite';
+                document.getElementById('suiteName').value = suite.name;
+                document.getElementById('suiteDescription').value = suite.description || '';
+                document.getElementById('suiteModule').value = suite.module || '';
+                document.getElementById('executionMode').value = suite.execution_mode;
+                document.getElementById('suiteStatus').value = suite.status;
+                populateParentSuiteOptions();
+                document.getElementById('parentSuiteId').value = suite.parent_suite_id || '';
+                editingSuiteId = suiteId;
+                document.getElementById('suiteModal').classList.add('active');
+            } catch (error) {
+                console.error('Error loading suite:', error);
+                showNotification('Failed to load suite details', 'error');
+            }
+        }
+
+        async function deleteSuite(suiteId) {
+            if (!confirm('Are you sure you want to delete this suite? This cannot be undone.')) return;
+
+            try {
+                await API.apiCall(`/api/test-suites/${suiteId}`, 'DELETE');
+                showNotification('Suite deleted successfully!', 'success');
+                loadSuites();
+            } catch (error) {
+                console.error('Error deleting suite:', error);
+                showNotification('Failed to delete suite', 'error');
+            }
+        }
+
+        async function archiveSuite(suiteId) {
+            try {
+                await API.apiCall(`/api/test-suites/${suiteId}/archive`, 'PUT');
+                showNotification('Suite archived successfully!', 'success');
+                loadSuites();
+            } catch (error) {
+                console.error('Error archiving suite:', error);
+                showNotification('Failed to archive suite', 'error');
+            }
+        }
+
+        async function restoreSuite(suiteId) {
+            try {
+                await API.apiCall(`/api/test-suites/${suiteId}/restore`, 'PUT');
+                showNotification('Suite restored successfully!', 'success');
+                loadSuites();
+            } catch (error) {
+                console.error('Error restoring suite:', error);
+                showNotification('Failed to restore suite', 'error');
+            }
+        }
+
+        async function cloneSuite(suiteId) {
+            const newName = prompt('Enter name for the cloned suite:');
+            if (!newName) return;
+
+            try {
+                await API.apiCall(`/api/test-suites/${suiteId}/clone`, 'POST', {
+                    new_name: newName,
+                    include_child_suites: false
+                });
+                showNotification('Suite cloned successfully!', 'success');
+                loadSuites();
+            } catch (error) {
+                console.error('Error cloning suite:', error);
+                showNotification('Failed to clone suite', 'error');
+            }
+        }
+
+        function openAddTestCasesModal(suiteId) {
+            currentSuiteId = suiteId;
+            const container = document.getElementById('testCasesList');
+
+            if (allTestCases.length === 0) {
+                container.innerHTML = '<p>No test cases available</p>';
+            } else {
+                container.innerHTML = allTestCases.map(tc => `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="tc_${tc.id}" value="${tc.id}">
+                        <label for="tc_${tc.id}">${tc.test_case_id} - ${tc.title}</label>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('addTestCasesModal').classList.add('active');
+        }
+
+        function closeAddTestCasesModal() {
+            document.getElementById('addTestCasesModal').classList.remove('active');
+        }
+
+        async function addTestCasesToSuite() {
+            const checkboxes = document.querySelectorAll('#testCasesList input[type="checkbox"]:checked');
+            const testCaseIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            if (testCaseIds.length === 0) {
+                showNotification('Please select at least one test case', 'error');
+                return;
+            }
+
+            try {
+                await API.apiCall(`/api/test-suites/${currentSuiteId}/test-cases`, 'POST', {
+                    test_case_ids: testCaseIds
+                });
+                showNotification(`${testCaseIds.length} test case(s) added successfully!`, 'success');
+                closeAddTestCasesModal();
+                loadSuites();
+            } catch (error) {
+                console.error('Error adding test cases:', error);
+                showNotification('Failed to add test cases', 'error');
+            }
+        }
+
+        async function viewSuiteDetails(suiteId) {
+            document.getElementById('suiteDetailModal').classList.add('active');
+            document.getElementById('suiteDetailContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading...</p></div>';
+
+            try {
+                const suite = await API.apiCall(`/api/test-suites/${suiteId}`, 'GET');
+                document.getElementById('detailSuiteName').textContent = suite.name;
+
+                let testCasesHTML = '';
+                if (suite.test_cases && suite.test_cases.length > 0) {
+                    testCasesHTML = `
+                        <div class="test-cases-preview">
+                            <h4>Test Cases (${suite.test_cases.length})</h4>
+                            <div class="test-case-list">
+                                ${suite.test_cases.map(tc => `
+                                    <div class="test-case-item">
+                                        <span class="order">#${tc.order + 1}</span>
+                                        <span class="title">${tc.test_case_id} - ${tc.title}</span>
+                                        <span class="badge badge-${tc.priority}">${tc.priority}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('suiteDetailContent').innerHTML = `
+                    <div class="suite-meta" style="margin-bottom: 20px;">
+                        <div class="meta-item">
+                            <span class="meta-label">Suite ID</span>
+                            <span class="meta-value">${suite.suite_id}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Status</span>
+                            <span class="meta-value"><span class="badge badge-${suite.status}">${suite.status}</span></span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Module</span>
+                            <span class="meta-value">${suite.module || 'General'}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Execution Mode</span>
+                            <span class="meta-value"><span class="badge badge-${suite.execution_mode}">${suite.execution_mode}</span></span>
+                        </div>
+                    </div>
+                    ${suite.description ? `<div style="margin-bottom: 20px;"><strong>Description:</strong><p>${suite.description}</p></div>` : ''}
+                    ${testCasesHTML}
+                    <div class="form-actions" style="margin-top: 20px;">
+                        <button class="btn btn-success" onclick="executeSuite(${suite.id}); closeSuiteDetailModal();">Execute Suite</button>
+                        <button class="btn btn-secondary" onclick="closeSuiteDetailModal()">Close</button>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading suite details:', error);
+                document.getElementById('suiteDetailContent').innerHTML = '<p>Failed to load suite details</p>';
+            }
+        }
+
+        function closeSuiteDetailModal() {
+            document.getElementById('suiteDetailModal').classList.remove('active');
+        }
+
+        async function executeSuite(suiteId) {
+            try {
+                const response = await API.apiCall('/api/test-suites/execute', 'POST', {
+                    suite_id: suiteId,
+                    execution_name: `Execution ${new Date().toLocaleString()}`,
+                    environment: 'production'
+                });
+                showNotification(`Suite execution started! ID: ${response.id}`, 'success');
+                // In a real app, you'd redirect to execution details or update UI
+            } catch (error) {
+                console.error('Error executing suite:', error);
+                showNotification('Failed to start suite execution', 'error');
+            }
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.className = `notification ${type} show`;
+            document.getElementById('notificationMessage').textContent = message;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>

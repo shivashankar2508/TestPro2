@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - TestTrack Pro</title>
+    <link rel="stylesheet" href="/styles/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2>Admin Panel</h2>
+                <span class="user-role" id="userRole">Admin</span>
+            </div>
+            <nav class="admin-nav">
+                <a href="#" class="nav-link active" data-section="dashboard">📊 Dashboard</a>
+                <a href="#" class="nav-link" data-section="users">👥 User Management</a>
+                <a href="#" class="nav-link" data-section="projects">📁 Projects</a>
+                <a href="#" class="nav-link" data-section="permissions">🔐 Permissions</a>
+                <a href="#" class="nav-link" data-section="system">⚙️ System Config</a>
+                <a href="#" class="nav-link" data-section="backups">💾 Backups</a>
+                <a href="#" class="nav-link" data-section="audit-logs">📝 Audit Logs</a>
+                <hr>
+                <a href="/dashboard" class="nav-link">← Back to Dashboard</a>
+                <a href="#" class="nav-link" id="logoutBtn">🚪 Logout</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="admin-section active">
+                <h1>System Dashboard</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Users</h3>
+                        <p class="stat-value" id="totalUsers">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Users</h3>
+                        <p class="stat-value" id="activeUsers">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Projects</h3>
+                        <p class="stat-value" id="totalProjects">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Test Cases</h3>
+                        <p class="stat-value" id="totalTestCases">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Executions</h3>
+                        <p class="stat-value" id="totalExecutions">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Last Backup</h3>
+                        <p class="stat-value" id="lastBackup">Never</p>
+                    </div>
+                </div>
+                <div class="health-check">
+                    <h3>System Health</h3>
+                    <button class="btn btn-primary" id="healthCheckBtn">Run Health Check</button>
+                    <div id="healthCheckResult"></div>
+                </div>
+            </section>
+
+            <!-- Users Section -->
+            <section id="users-section" class="admin-section">
+                <h1>User Management</h1>
+                <div class="toolbar">
+                    <button class="btn btn-primary" id="addUserBtn">+ Add New User</button>
+                    <input type="search" id="userSearch" class="search-input" placeholder="Search users...">
+                </div>
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Projects Section -->
+            <section id="projects-section" class="admin-section">
+                <h1>Project Management</h1>
+                <div class="toolbar">
+                    <button class="btn btn-primary" id="addProjectBtn">+ New Project</button>
+                    <select id="projectStatusFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Project Name</th>
+                            <th>Status</th>
+                            <th>Lead</th>
+                            <th>Members</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectsTableBody">
+                        <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Permissions Section -->
+            <section id="permissions-section" class="admin-section">
+                <h1>Permission Management</h1>
+                <div class="toolbar">
+                    <button class="btn btn-primary" id="initializePermissionsBtn">Initialize Default Permissions</button>
+                </div>
+                <div class="permissions-grid">
+                    <div class="permission-panel">
+                        <h3>All Permissions</h3>
+                        <div id="permissionsList" class="permissions-list"></div>
+                    </div>
+                    <div class="permission-panel">
+                        <h3>Role Permissions</h3>
+                        <select id="roleSelect" class="form-control">
+                            <option value="admin">Admin</option>
+                            <option value="developer">Developer</option>
+                            <option value="tester">Tester</option>
+                        </select>
+                        <div id="rolePermissionsList" class="permissions-list"></div>
+                        <button class="btn btn-primary" id="assignPermissionBtn">Assign Permission</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Configuration Section -->
+            <section id="system-section" class="admin-section">
+                <h1>System Configuration</h1>
+                <div id="configList" class="config-list"></div>
+            </section>
+
+            <!-- Backups Section -->
+            <section id="backups-section" class="admin-section">
+                <h1>Backup Management</h1>
+                <div class="toolbar">
+                    <button class="btn btn-primary" id="fullBackupBtn">Full Backup</button>
+                    <button class="btn btn-secondary" id="incrementalBackupBtn">Incremental Backup</button>
+                    <button class="btn btn-secondary" id="testCasesBackupBtn">Test Cases Backup</button>
+                </div>
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Backup Name</th>
+                            <th>Type</th>
+                            <th>Size</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="backupsTableBody">
+                        <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Audit Logs Section -->
+            <section id="audit-logs-section" class="admin-section">
+                <h1>Audit Logs</h1>
+                <div class="toolbar">
+                    <select id="auditActionFilter" class="filter-select">
+                        <option value="">All Actions</option>
+                        <option value="login">Login</option>
+                        <option value="user_updated">User Updated</option>
+                        <option value="backup_created">Backup Created</option>
+                    </select>
+                </div>
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Resource</th>
+                            <th>Details</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditLogsTableBody">
+                        <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2>Add/Edit User</h2>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="userEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Name:</label>
+                    <input type="text" id="userName" required>
+                </div>
+                <div class="form-group">
+                    <label>Role:</label>
+                    <select id="userRole">
+                        <option value="admin">Admin</option>
+                        <option value="developer">Developer</option>
+                        <option value="tester">Tester</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2>Add/Edit Project</h2>
+            <form id="projectForm">
+                <input type="hidden" id="projectId">
+                <div class="form-group">
+                    <label>Project Name:</label>
+                    <input type="text" id="projectName" required>
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="projectDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Status:</label>
+                    <select id="projectStatus">
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js?v=20260305"></script>
+    <script src="/js/admin.js?v=20260305"></script>
+</body>
+</html>

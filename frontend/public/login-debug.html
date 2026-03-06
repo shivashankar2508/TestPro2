@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>TestTrack Pro - Login Debug Console</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+        }
+
+        h1 {
+            color: #4ec9b0;
+            margin: 10px 0;
+        }
+
+        .section {
+            background: #252526;
+            border: 1px solid #3e3e42;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .section h2 {
+            color: #67cdcc;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            background: #005a9e;
+        }
+
+        .output {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+
+        .line {
+            padding: 3px 0;
+        }
+
+        .success {
+            color: #4ec9b0;
+        }
+
+        .error {
+            color: #f48771;
+        }
+
+        .info {
+            color: #9cdcfe;
+        }
+
+        .warning {
+            color: #dcdcaa;
+        }
+
+        input {
+            background: #3c3c3c;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            padding: 5px;
+            margin: 5px 0;
+            width: 300px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TestTrack Pro - Login Debug Console</h1>
+    <p style="color: #999; margin: 10px 0;">Follow the steps to diagnose the login issue</p>
+
+    <!-- Step 1: Quick Login -->
+    <div class="section">
+        <h2>Step 1: Perform Login</h2>
+        <input type="text" id="email" placeholder="Email" value="admin@testtrack.com">
+        <input type="password" id="password" placeholder="Password" value="Admin@123">
+        <button onclick="stepLogin()">Login</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+        <div id="logs" class="output"></div>
+    </div>
+
+    <!-- Step 2: Test Echo Endpoint -->
+    <div class="section">
+        <h2>Step 2: Test Echo Endpoint (Simple Request)</h2>
+        <button onclick="testEcho()">Test /debug/echo (GET)</button>
+        <button onclick="testEchoPost()">Test /debug/echo (POST)</button>
+        <p style="font-size: 11px; color: #999; margin-top: 5px;">This endpoint just echoes back what headers you sent
+        </p>
+    </div>
+
+    <!-- Step 3: Test Users/Me -->
+    <div class="section">
+        <h2>Step 3: Test /users/me</h2>
+        <button onclick="testUsersMe()">Call /users/me</button>
+        <p style="font-size: 11px; color: #999; margin-top: 5px;">If this fails, you'll see the exact error from the
+            backend</p>
+    </div>
+
+    <!-- Step 4: Simulate Dashboard -->
+    <div class="section">
+        <h2>Step 4: Simulate Dashboard Initialization</h2>
+        <button onclick="simulateDashboard()">Simulate Dashboard Load</button>
+        <p style="font-size: 11px; color: #999; margin-top: 5px;">This mimics exactly what happens when you're
+            redirected to /dashboard</p>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001/api';
+
+        function log(msg, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const line = document.createElement('div');
+            line.className = 'line ' + type;
+
+            const time = new Date().toLocaleTimeString();
+            line.textContent = `[${time}] ${msg}`;
+
+            logsDiv.appendChild(line);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+
+            if (type === 'error') console.error(msg);
+            else if (type === 'success') console.log('%c' + msg, 'color: green; font-weight: bold;');
+            else console.log(msg);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        async function stepLogin() {
+            clearLogs();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            log(`Logging in as ${email}...`);
+
+            try {
+                const resp = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, remember_me: false })
+                });
+
+                log(`Response Status: ${resp.status}`, 'info');
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    const token = data.access_token;
+                    localStorage.setItem('access_token', token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+
+                    log(`Login successful!`, 'success');
+                    log(`Token: ${token.substring(0, 50)}...`, 'info');
+                    log(`Stored in localStorage`, 'success');
+                } else {
+                    log(`Login failed: ${data.detail}`, 'error');
+                }
+            } catch (e) {
+                log(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testEcho() {
+            log('Testing /debug/echo...', 'info');
+            const token = localStorage.getItem('access_token');
+
+            if (!token) {
+                log('No token! Login first.', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${API_BASE}/debug/echo`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                log(`Response: ${resp.status}`, 'info');
+                const data = await resp.json();
+
+                log(`Authorization received on backend: ${data.authorization}`, data.authorization.startsWith('Bearer ') ? 'success' : 'error');
+                log(`Has Bearer prefix: ${data.has_bearer}`, data.has_bearer ? 'success' : 'error');
+            } catch (e) {
+                log(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testEchoPost() {
+            log('Testing /debug/echo (POST)...', 'info');
+            const token = localStorage.getItem('access_token');
+
+            if (!token) {
+                log('No token! Login first.', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${API_BASE}/debug/echo`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ test: 'data' })
+                });
+
+                log(`Response: ${resp.status}`, 'info');
+                const data = await resp.json();
+
+                log(`Authorization found: ${!!data.authorization}`, data.authorization ? 'success' : 'warning');
+            } catch (e) {
+                log(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testUsersMe() {
+            log('/users/me Test', 'warning');
+            const token = localStorage.getItem('access_token');
+
+            if (!token) {
+                log('No token found!', 'error');
+                return;
+            }
+
+            log(`Token found: ${token.substring(0, 30)}...`, 'info');
+
+            try {
+                const resp = await fetch(`${API_BASE}/users/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                log(`Response Status: ${resp.status} ${resp.statusText}`, 'info');
+
+                if (resp.ok) {
+                    const user = await resp.json();
+                    log(`User: ${user.email} (${user.role})`, 'success');
+                } else {
+                    const error = await resp.json();
+                    log(`Error: ${error.detail || JSON.stringify(error)}`, 'error');
+                }
+            } catch (e) {
+                log(`Fetch Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function simulateDashboard() {
+            log('Simulating Dashboard.js DOMContentLoaded...', 'warning');
+            clearLogs();
+
+            const token = localStorage.getItem('access_token');
+            log(`Step 1: Check token: ${token ? 'Found' : 'NOT FOUND'}`, token ? 'success' : 'error');
+
+            if (!token) {
+                log('Would redirect to /login', 'warning');
+                return;
+            }
+
+            log('Step 2: Calling API.Auth.getCurrentUser()...', 'info');
+
+            try {
+                const resp = await fetch(`${API_BASE}/users/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                log(`/users/me Response: ${resp.status}`, 'info');
+
+                if (resp.ok) {
+                    const user = await resp.json();
+                    log(`User loaded: ${user.email}`, 'success');
+                    log('Dashboard would initialize successfully!', 'success');
+                } else {
+                    const error = await resp.json();
+                    log(`API Error: ${error.detail}`, 'error');
+                    log('Dashboard would redirect back to login', 'warning');
+                }
+            } catch (e) {
+                log(`Fetch Error: ${e.message}`, 'error');
+                log('Dashboard would catch this error', 'warning');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            log('Debug Console Ready', 'success');
+        });
+    </script>
+</body>
+
+</html>

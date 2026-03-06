@@ -1,0 +1,14 @@
+{
+    "name": "@testtrack-pro/shared",
+    "version": "1.0.0",
+    "description": "Shared utilities and types for TestTrack Pro",
+    "private": true,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "test": "vitest"
+    },
+    "dependencies": {},
+    "devDependencies": {}
+}

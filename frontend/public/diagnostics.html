@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestTrack Pro - Complete Diagnostics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-section h2 {
+            color: #0066cc;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #0066cc;
+            padding-bottom: 10px;
+        }
+
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #0052a3;
+        }
+
+        .output {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 8px;
+            border-left: 3px solid #ddd;
+        }
+
+        .log-entry.info {
+            border-left-color: #0066cc;
+            background: #e8f4ff;
+        }
+
+        .log-entry.success {
+            border-left-color: #28a745;
+            background: #e8f5e9;
+        }
+
+        .log-entry.error {
+            border-left-color: #dc3545;
+            background: #ffebee;
+        }
+
+        .log-entry.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 11px;
+        }
+
+        .token-display {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>TestTrack Pro - Complete Diagnostics</h1>
+        <p style="margin-bottom: 20px; color: #666;">Run these tests in order to diagnose the login redirect loop issue
+        </p>
+
+        <!-- Step 1: Login -->
+        <div class="test-section">
+            <h2>Step 1: Perform Login</h2>
+            <button onclick="runLogin()">Login as Admin</button>
+            <button onclick="checkLocalStorage()">Check localStorage (after login)</button>
+            <div id="loginOutput" class="output"></div>
+        </div>
+
+        <!-- Step 2: Check Token -->
+        <div class="test-section">
+            <h2>Step 2: Verify Token Storage</h2>
+            <button onclick="displayTokens()">Display Stored Tokens</button>
+            <button onclick="validateTokenFormat()">Validate Token Format</button>
+            <div id="tokenOutput" class="output"></div>
+        </div>
+
+        <!-- Step 3: Test API Calls -->
+        <div class="test-section">
+            <h2>Step 3: Test API Calls</h2>
+            <button onclick="testUsersMe()">Test /users/me</button>
+            <button onclick="testDebugEndpoint()">Test Debug Endpoint</button>
+            <button onclick="testPreflight()">Test CORS Preflight</button>
+            <div id="apiOutput" class="output"></div>
+        </div>
+
+        <!-- Step 4: Simulate Dashboard Load -->
+        <div class="test-section">
+            <h2>Step 4: Simulate Dashboard Initialization</h2>
+            <button onclick="simulateDashboardInit()">Simulate Dashboard Init</button>
+            <button onclick="testCompleteFlow()">Test Complete Flow (Login + Dashboard)</button>
+            <div id="dashboardOutput" class="output"></div>
+        </div>
+
+        <!-- Step 5: Manual Redirect Test -->
+        <div class="test-section">
+            <h2>Step 5: Manual Actions</h2>
+            <button onclick="goToLogin()">Redirect to /login</button>
+            <button onclick="goToDashboard()">Redirect to /dashboard</button>
+            <button onclick="clearAll()">Clear Everything</button>
+            <div id="actionOutput" class="output"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8001/api';
+
+        function addLog(outputId, message, level = 'info') {
+            const output = document.getElementById(outputId);
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${level}`;
+
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="timestamp">${timestamp}</span> ${escapeHtml(message)}`;
+
+            output.appendChild(entry);
+            output.scrollTop = output.scrollHeight;
+
+            console.log(`[${level.toUpperCase()}] ${message}`);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function runLogin() {
+            const outputId = 'loginOutput';
+            document.getElementById(outputId).innerHTML = '';
+
+            addLog(outputId, 'Starting login...');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@testtrack.com',
+                        password: 'Admin@123',
+                        remember_me: false
+                    })
+                });
+
+                addLog(outputId, `Response status: ${response.status}`);
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+
+                    addLog(outputId, `Tokens stored! Access token: ${data.access_token.substring(0, 50)}...`, 'success');
+                    addLog(outputId, `Token expires in: ${data.expires_in} seconds`, 'info');
+                } else {
+                    addLog(outputId, `Login failed: ${data.detail}`, 'error');
+                }
+            } catch (error) {
+                addLog(outputId, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function checkLocalStorage() {
+            const outputId = 'loginOutput';
+            addLog(outputId, '--- localStorage Contents ---', 'info');
+
+            const accessToken = localStorage.getItem('access_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            addLog(outputId, `access_token exists: ${!!accessToken}`, accessToken ? 'success' : 'error');
+            if (accessToken) {
+                addLog(outputId, `access_token length: ${accessToken.length}`);
+                addLog(outputId, `access_token starts with: ${accessToken.substring(0, 50)}...`);
+            }
+
+            addLog(outputId, `refresh_token exists: ${!!refreshToken}`, refreshToken ? 'success' : 'error');
+            if (refreshToken) {
+                addLog(outputId, `refresh_token length: ${refreshToken.length}`);
+            }
+        }
+
+        function displayTokens() {
+            const outputId = 'tokenOutput';
+            document.getElementById(outputId).innerHTML = '';
+
+            const accessToken = localStorage.getItem('access_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            addLog(outputId, '--- Access Token ---', 'info');
+            if (accessToken) {
+                const tokenDiv = document.createElement('div');
+                tokenDiv.className = 'token-display';
+                tokenDiv.textContent = accessToken;
+                document.getElementById(outputId).appendChild(tokenDiv);
+            } else {
+                addLog(outputId, 'NO ACCESS TOKEN FOUND', 'error');
+            }
+
+            addLog(outputId, '--- Refresh Token ---', 'info');
+            if (refreshToken) {
+                const tokenDiv = document.createElement('div');
+                tokenDiv.className = 'token-display';
+                tokenDiv.textContent = refreshToken;
+                document.getElementById(outputId).appendChild(tokenDiv);
+            } else {
+                addLog(outputId, 'NO REFRESH TOKEN FOUND', 'error');
+            }
+        }
+
+        function validateTokenFormat() {
+            const outputId = 'tokenOutput';
+            addLog(outputId, '--- Token Format Validation ---', 'info');
+
+            const accessToken = localStorage.getItem('access_token');
+            if (!accessToken) {
+                addLog(outputId, 'No token to validate', 'error');
+                return;
+            }
+
+            // JWT format check
+            const parts = accessToken.split('.');
+            if (parts.length !== 3) {
+                addLog(outputId, `Invalid JWT format: expected 3 parts, got ${parts.length}`, 'error');
+            } else {
+                addLog(outputId, 'Valid JWT format (has 3 parts)', 'success');
+            }
+
+            // Try to decode header
+            try {
+                const header = JSON.parse(atob(parts[0]));
+                addLog(outputId, `JWT Header: ${JSON.stringify(header)}`, 'info');
+            } catch (e) {
+                addLog(outputId, 'Failed to decode JWT header', 'error');
+            }
+
+            // Try to decode payload
+            try {
+                const payload = JSON.parse(atob(parts[1]));
+                addLog(outputId, `JWT Payload keys: ${Object.keys(payload).join(', ')}`, 'info');
+                addLog(outputId, `User ID (sub): ${payload.sub}`, 'info');
+                addLog(outputId, `Token type: ${payload.type}`, 'info');
+            } catch (e) {
+                addLog(outputId, 'Failed to decode JWT payload', 'error');
+            }
+        }
+
+        async function testUsersMe() {
+            const outputId = 'apiOutput';
+            document.getElementById(outputId).innerHTML = '';
+
+            const accessToken = localStorage.getItem('access_token');
+            if (!accessToken) {
+                addLog(outputId, 'No token found in localStorage!', 'error');
+                return;
+            }
+
+            addLog(outputId, 'Testing /users/me endpoint...', 'info');
+            addLog(outputId, `Authorization header: Bearer ${accessToken.substring(0, 50)}...`);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                addLog(outputId, `Response status: ${response.status}`);
+
+                if (response.ok) {
+                    const user = await response.json();
+                    addLog(outputId, `User retrieved successfully!`, 'success');
+                    addLog(outputId, `Email: ${user.email}`, 'success');
+                    addLog(outputId, `Role: ${user.role}`, 'success');
+                    addLog(outputId, `Full Name: ${user.full_name}`, 'success');
+                } else {
+                    const error = await response.json();
+                    addLog(outputId, `Error: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                addLog(outputId, `Fetch error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDebugEndpoint() {
+            const outputId = 'apiOutput';
+            addLog(outputId, '--- Testing Debug Endpoint ---', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/debug/request-info`);
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog(outputId, `Debug info:`, 'success');
+                    addLog(outputId, `Authorization header: ${data.headers.authorization}`, 'info');
+                    addLog(outputId, `Origin: ${data.headers.origin}`, 'info');
+                } else {
+                    addLog(outputId, `Debug endpoint error: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addLog(outputId, `Debug test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPreflight() {
+            const outputId = 'apiOutput';
+            addLog(outputId, '--- Testing CORS Preflight ---', 'info');
+
+            const accessToken = localStorage.getItem('access_token');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/me`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'authorization'
+                    }
+                });
+
+                addLog(outputId, `Preflight response status: ${response.status}`, 'info');
+                addLog(outputId, `Access-Control-Allow-Origin: ${response.headers.get('Access-Control-Allow-Origin')}`, 'info');
+                addLog(outputId, `Access-Control-Allow-Methods: ${response.headers.get('Access-Control-Allow-Methods')}`, 'info');
+
+            } catch (error) {
+                addLog(outputId, `Preflight test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateDashboardInit() {
+            const outputId = 'dashboardOutput';
+            document.getElementById(outputId).innerHTML = '';
+
+            addLog(outputId, '--- Simulating Dashboard.js DOMContentLoaded ---', 'info');
+
+            const token = localStorage.getItem('access_token');
+            addLog(outputId, `Token found in localStorage: ${!!token}`, token ? 'success' : 'error');
+
+            if (!token) {
+                addLog(outputId, 'Would redirect to /login here', 'warning');
+                return;
+            }
+
+            addLog(outputId, 'Calling API.Auth.getCurrentUser() (simulated)...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    addLog(outputId, `Dashboard loaded successfully!`, 'success');
+                    addLog(outputId, `Displaying user: ${user.full_name} (${user.email})`, 'success');
+                } else {
+                    addLog(outputId, `/users/me returned ${response.status}`, 'error');
+                    const error = await response.json();
+                    addLog(outputId, `Error detail: ${error.detail}`, 'error');
+                    addLog(outputId, 'Would redirect to /login here due to error', 'warning');
+                }
+            } catch (error) {
+                addLog(outputId, `Fetch error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCompleteFlow() {
+            const outputId = 'dashboardOutput';
+            document.getElementById(outputId).innerHTML = '';
+
+            addLog(outputId, '=== Testing Complete Login + Dashboard Flow ===', 'info');
+
+            // Step 1: Login
+            addLog(outputId, '1. Logging in...', 'info');
+            try {
+                const loginResp = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@testtrack.com',
+                        password: 'Admin@123'
+                    })
+                });
+
+                if (!loginResp.ok) {
+                    addLog(outputId, `Login failed: ${loginResp.status}`, 'error');
+                    return;
+                }
+
+                const loginData = await loginResp.json();
+                localStorage.setItem('access_token', loginData.access_token);
+                addLog(outputId, '✓ Login successful, token stored', 'success');
+
+                // Step 2: Simulate dashboard load (checking token)
+                addLog(outputId, '2. Dashboard page load...', 'info');
+                const token = localStorage.getItem('access_token');
+                addLog(outputId, `Token retrieved from localStorage: ${token ? 'YES' : 'NO'}`, token ? 'success' : 'error');
+
+                // Step 3: Call /users/me
+                addLog(outputId, '3. Calling /users/me...', 'info');
+                const userResp = await fetch(`${API_BASE_URL}/users/me`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (userResp.ok) {
+                    const user = await userResp.json();
+                    addLog(outputId, `✓ /users/me successful: ${user.email}`, 'success');
+                    addLog(outputId, '✓ COMPLETE FLOW SUCCESSFUL!', 'success');
+                } else {
+                    addLog(outputId, `/users/me failed: ${userResp.status}`, 'error');
+                    const errData = await userResp.json();
+                    addLog(outputId, `Error: ${errData.detail}`, 'error');
+                    addLog(outputId, '✗ FLOW FAILED - would redirect to login', 'error');
+                }
+            } catch (error) {
+                addLog(outputId, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function goToLogin() {
+            const outputId = 'actionOutput';
+            document.getElementById(outputId).innerHTML = '';
+            addLog(outputId, 'Redirecting to /login...', 'info');
+            setTimeout(() => { window.location.href = '/login'; }, 1000);
+        }
+
+        function goToDashboard() {
+            const outputId = 'actionOutput';
+            document.getElementById(outputId).innerHTML = '';
+            addLog(outputId, 'Redirecting to /dashboard...', 'info');
+            setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+        }
+
+        function clearAll() {
+            const outputId = 'actionOutput';
+            document.getElementById(outputId).innerHTML = '';
+
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            sessionStorage.clear();
+
+            addLog(outputId, 'All localStorage and sessionStorage cleared', 'success');
+            addLog(outputId, 'Tokens: ' + (localStorage.getItem('access_token') ? 'Still exist!' : 'Cleared!'), 'success');
+        }
+
+        // Auto-run some checks on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Diagnostics page loaded');
+            console.log('localStorage contents:', JSON.stringify({ access_token: !!localStorage.getItem('access_token'), refresh_token: !!localStorage.getItem('refresh_token') }));
+        });
+    </script>
+</body>
+
+</html>

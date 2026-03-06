@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TestTrack Pro</title>
+    <link rel="stylesheet" href="styles/dashboard.css">
+</head>
+
+<body>
+    <!-- Main Dashboard Container -->
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🧪</span>
+                    <h2>TestTrack Pro</h2>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-view="test-cases">
+                    <span class="icon">📋</span>
+                    <span>Test Cases</span>
+                </a>
+                <a href="/suite-management.html" class="nav-item">
+                    <span class="icon">📦</span>
+                    <span>Test Suites</span>
+                </a>
+                <a href="#" class="nav-item" data-view="templates">
+                    <span class="icon">📑</span>
+                    <span>Templates</span>
+                </a>
+                <a href="#" class="nav-item" data-view="executions">
+                    <span class="icon">▶️</span>
+                    <span>Test Executions</span>
+                </a>
+                <a href="#" class="nav-item" data-view="bugs">
+                    <span class="icon">🐛</span>
+                    <span>Bug Reports</span>
+                </a>
+                <a href="#" class="nav-item" data-view="analytics">
+                    <span class="icon">📊</span>
+                    <span>Analytics</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">👤</div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName">Loading...</div>
+                        <div class="user-role" id="userRole">User</div>
+                    </div>
+                </div>
+                <a href="/admin" class="btn-link" id="adminLink" style="display: none;">
+                    <span>⚙️</span> Admin Panel
+                </a>
+                <button class="btn-logout" id="logoutBtn">
+                    <span>🚪</span> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <h1 id="pageTitle">Test Cases</h1>
+                    <p id="pageSubtitle">Manage and organize your test cases</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" id="createTestCaseBtn">
+                        <span class="icon">➕</span> Create Test Case
+                    </button>
+                </div>
+            </header>
+
+            <!-- Test Cases View -->
+            <div id="testCasesView" class="view-container active">
+                <!-- Filters and Search -->
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search test cases..." class="search-input">
+                        <span class="search-icon">🔍</span>
+                    </div>
+
+                    <div class="filters">
+                        <select id="filterStatus" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="draft">Draft</option>
+                            <option value="ready_for_review">Ready for Review</option>
+                            <option value="approved">Approved</option>
+                            <option value="deprecated">Deprecated</option>
+                            <option value="archived">Archived</option>
+                        </select>
+
+                        <select id="filterPriority" class="filter-select">
+                            <option value="">All Priorities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+
+                        <select id="filterType" class="filter-select">
+                            <option value="">All Types</option>
+                            <option value="functional">Functional</option>
+                            <option value="regression">Regression</option>
+                            <option value="smoke">Smoke</option>
+                            <option value="integration">Integration</option>
+                            <option value="uat">UAT</option>
+                            <option value="performance">Performance</option>
+                            <option value="security">Security</option>
+                            <option value="usability">Usability</option>
+                        </select>
+
+                        <select id="filterAutomation" class="filter-select">
+                            <option value="">Automation Status</option>
+                            <option value="not_automated">Not Automated</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="automated">Automated</option>
+                            <option value="cannot_automate">Cannot Automate</option>
+                        </select>
+                    </div>
+
+                    <div class="bulk-actions" id="bulkActionsBar" style="display: none;">
+                        <span id="selectedCount">0 selected</span>
+                        <button class="btn btn-sm" id="bulkUpdateBtn">Bulk Update</button>
+                        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn">Bulk Delete</button>
+                        <button class="btn btn-sm" id="bulkExportBtn">Export</button>
+                        <button class="btn btn-sm btn-secondary" id="clearSelectionBtn">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-bar">
+                    <button class="btn btn-secondary" id="importTestCasesBtn">
+                        <span class="icon">📥</span> Import
+                    </button>
+                    <button class="btn btn-secondary" id="exportAllBtn">
+                        <span class="icon">📤</span> Export All
+                    </button>
+                </div>
+
+                <!-- Test Cases Table -->
+                <div class="table-container">
+                    <table class="data-table" id="testCasesTable">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="selectAllCheckbox"></th>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Type</th>
+                                <th>Owner</th>
+                                <th>Assigned To</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testCasesTableBody">
+                            <tr class="loading-row">
+                                <td colspan="10" class="text-center">
+                                    <div class="spinner"></div>
+                                    Loading test cases...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="pagination">
+                    <button class="btn btn-sm" id="prevPageBtn">← Previous</button>
+                    <span id="pageInfo">Page 1 of 1</span>
+                    <button class="btn btn-sm" id="nextPageBtn">Next →</button>
+                </div>
+            </div>
+
+            <!-- Templates View -->
+            <div id="templatesView" class="view-container">
+                <div class="toolbar">
+                    <div class="filters">
+                        <select id="filterTemplateCategory" class="filter-select">
+                            <option value="">All Categories</option>
+                            <option value="Functional">Functional</option>
+                            <option value="Non-Functional">Non-Functional</option>
+                            <option value="Security">Security</option>
+                            <option value="Performance">Performance</option>
+                            <option value="UI/UX">UI/UX</option>
+                            <option value="API">API</option>
+                            <option value="Database">Database</option>
+                            <option value="Mobile">Mobile</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="templates-grid" id="templatesGrid">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        Loading templates...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Executions View -->
+            <div id="executionsView" class="view-container">
+                <div class="toolbar">
+                    <div class="filters"
+                        style="width: 100%; gap: 12px; display: flex; flex-wrap: wrap; align-items: center;">
+                        <select id="executionTestCaseSelect" class="filter-select" style="min-width: 280px;">
+                            <option value="">Select test case...</option>
+                        </select>
+                        <button class="btn btn-primary" id="startExecutionBtn">Start Execution</button>
+                        <button class="btn btn-secondary" id="reexecuteBtn">Re-Execute</button>
+                        <button class="btn btn-secondary" id="refreshExecutionHistoryBtn">Refresh History</button>
+                    </div>
+                </div>
+
+                <div class="action-bar" style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                    <button class="btn btn-secondary" id="pauseTimerBtn">Pause Timer</button>
+                    <button class="btn btn-secondary" id="resumeTimerBtn">Resume Timer</button>
+                    <input type="number" id="manualDurationInput" class="form-control" style="max-width:180px;"
+                        placeholder="Manual mins">
+                    <button class="btn btn-secondary" id="setManualDurationBtn">Set Manual</button>
+                    <button class="btn btn-primary" id="completeExecutionBtn">Complete Execution</button>
+                    <span id="executionTimerDisplay" style="font-weight: 600;">Timer: 00:00</span>
+                </div>
+
+                <div class="table-container" style="margin-bottom: 16px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Step #</th>
+                                <th>Action</th>
+                                <th>Expected</th>
+                                <th>Status</th>
+                                <th>Actual Result</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="executionStepsBody">
+                            <tr>
+                                <td colspan="7" class="text-center">Select a test case and start execution</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugSummary">Fail & Report Bug Summary</label>
+                        <input type="text" id="bugSummary" class="form-control"
+                            placeholder="Bug summary for failed step">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugDescription">Bug Description</label>
+                        <input type="text" id="bugDescription" class="form-control" placeholder="Bug details">
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 16px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="executionEvidenceFile">Execution Evidence Upload</label>
+                        <input type="file" id="executionEvidenceFile" class="form-control">
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end; gap:10px;">
+                        <button class="btn btn-secondary" id="uploadEvidenceBtn">Upload for Selected Step</button>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 16px;">
+                    <div class="form-group" style="flex: 1;">
+                        <h3 style="margin-bottom: 8px;">Create Test Run / Cycle</h3>
+                        <input type="text" id="runName" class="form-control"
+                            placeholder="Run name (e.g., Sprint 5 Regression)">
+                    </div>
+                    <div class="form-group" style="max-width: 220px;">
+                        <label for="runStartDate">Target Start</label>
+                        <input type="datetime-local" id="runStartDate" class="form-control">
+                    </div>
+                    <div class="form-group" style="max-width: 220px;">
+                        <label for="runEndDate">Target End</label>
+                        <input type="datetime-local" id="runEndDate" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 16px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="runTestCasesSelect">Test Cases (multi-select)</label>
+                        <select id="runTestCasesSelect" class="form-control" multiple
+                            style="min-height: 120px;"></select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="runTestersSelect">Testers (multi-select)</label>
+                        <select id="runTestersSelect" class="form-control" multiple style="min-height: 120px;"></select>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end;">
+                        <button class="btn btn-primary" id="createRunBtn">Create Run</button>
+                    </div>
+                </div>
+
+                <div class="table-container" style="margin-bottom: 16px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Run</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Target End</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testRunsTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center">No test runs yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Execution ID</th>
+                                <th>Status</th>
+                                <th>Duration (min)</th>
+                                <th>Pass/Fail/Blocked/Skipped</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="executionHistoryBody">
+                            <tr>
+                                <td colspan="5" class="text-center">No execution history loaded</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bug Reports View -->
+            <div id="bugsView" class="view-container">
+                <div class="toolbar">
+                    <div class="filters" style="width: 100%; display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-secondary" id="refreshBugsBtn">Refresh Bug Reports</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Bug ID</th>
+                                <th>Test Case</th>
+                                <th>Execution ID</th>
+                                <th>Status</th>
+                                <th>Execution Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bugsTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center">No bug reports loaded</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Analytics View -->
+            <div id="analyticsView" class="view-container">
+                <div class="toolbar">
+                    <div class="filters" style="width: 100%; display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-secondary" id="refreshAnalyticsBtn">Refresh Analytics</button>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 16px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Total Test Cases</label>
+                        <input type="text" id="analyticsTotalCases" class="form-control" readonly value="0">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Total Executions</label>
+                        <input type="text" id="analyticsTotalExecutions" class="form-control" readonly value="0">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Pass Rate</label>
+                        <input type="text" id="analyticsPassRate" class="form-control" readonly value="0%">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Total Bugs Linked</label>
+                        <input type="text" id="analyticsTotalBugs" class="form-control" readonly value="0">
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analyticsBreakdownBody">
+                            <tr>
+                                <td colspan="2" class="text-center">No analytics loaded</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Create/Edit Test Case -->
+    <div class="modal" id="testCaseModal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="testCaseModalTitle">Create Test Case</h2>
+                    <button class="modal-close" data-modal="testCaseModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="testCaseForm">
+                        <input type="hidden" id="testCaseId">
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="title">Title <span class="required">*</span></label>
+                                <input type="text" id="title" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="description">Description</label>
+                                <textarea id="description" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-4">
+                                <label for="priority">Priority <span class="required">*</span></label>
+                                <select id="priority" class="form-control" required>
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group col-4">
+                                <label for="severity">Severity <span class="required">*</span></label>
+                                <select id="severity" class="form-control" required>
+                                    <option value="blocker">Blocker</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="major">Major</option>
+                                    <option value="minor" selected>Minor</option>
+                                    <option value="trivial">Trivial</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group col-4">
+                                <label for="status">Status <span class="required">*</span></label>
+                                <select id="status" class="form-control" required>
+                                    <option value="draft" selected>Draft</option>
+                                    <option value="ready_for_review">Ready for Review</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="deprecated">Deprecated</option>
+                                    <option value="archived">Archived</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-4">
+                                <label for="type">Type <span class="required">*</span></label>
+                                <select id="type" class="form-control" required>
+                                    <option value="functional" selected>Functional</option>
+                                    <option value="regression">Regression</option>
+                                    <option value="smoke">Smoke</option>
+                                    <option value="integration">Integration</option>
+                                    <option value="uat">UAT</option>
+                                    <option value="performance">Performance</option>
+                                    <option value="security">Security</option>
+                                    <option value="usability">Usability</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group col-4">
+                                <label for="automation_status">Automation <span class="required">*</span></label>
+                                <select id="automation_status" class="form-control" required>
+                                    <option value="not_automated" selected>Not Automated</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="automated">Automated</option>
+                                    <option value="cannot_automate">Cannot Automate</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group col-4">
+                                <label for="assigned_tester_id">Assign To</label>
+                                <select id="assigned_tester_id" class="form-control">
+                                    <option value="">Unassigned</option>
+                                    <!-- Will be populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-6">
+                                <label for="module">Module <span class="required">*</span></label>
+                                <input type="text" id="module" class="form-control" required>
+                            </div>
+
+                            <div class="form-group col-6">
+                                <label for="feature">Feature</label>
+                                <input type="text" id="feature" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="preconditions">Preconditions</label>
+                                <textarea id="preconditions" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="tags">Tags (comma-separated)</label>
+                                <input type="text" id="tags" class="form-control"
+                                    placeholder="e.g., login, ui, critical">
+                            </div>
+                        </div>
+
+                        <!-- Test Steps Section -->
+                        <div class="steps-section">
+                            <h3>Test Steps</h3>
+                            <div id="stepsContainer"></div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="addStepBtn">
+                                <span>➕</span> Add Step
+                            </button>
+                        </div>
+
+                        <div class="form-group" id="changeSummaryGroup" style="display: none;">
+                            <label for="change_summary">Change Summary <span class="required">*</span></label>
+                            <textarea id="change_summary" class="form-control" rows="2"
+                                placeholder="Describe what you changed and why (minimum 5 characters)"></textarea>
+                            <small class="form-text">Required when editing an existing test case</small>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-modal="testCaseModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="saveTestCaseBtn">Save Test Case</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Clone Test Case -->
+    <div class="modal" id="cloneModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Clone Test Case</h2>
+                    <button class="modal-close" data-modal="cloneModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Create a copy of this test case. The cloned test case will have all the same properties but with
+                        a new ID and Draft status.</p>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="cloneAttachments" checked>
+                            <span>Clone attachments</span>
+                        </label>
+                        <small class="form-text">Include all attachments from the original test case</small>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> The cloned test case will be automatically saved as Draft status and
+                        assigned to you.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="cloneModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmCloneBtn">Clone Test Case</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Delete Confirmation -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Confirm Deletion</h2>
+                    <button class="modal-close" data-modal="deleteModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this test case?</p>
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action will soft-delete the test case. Admins can restore it
+                        later if needed.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="deleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Bulk Update -->
+    <div class="modal" id="bulkUpdateModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Bulk Update Test Cases</h2>
+                    <button class="modal-close" data-modal="bulkUpdateModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Update <strong id="bulkUpdateCount">0</strong> selected test cases:</p>
+
+                    <form id="bulkUpdateForm">
+                        <div class="form-group">
+                            <label for="bulkStatus">Status</label>
+                            <select id="bulkStatus" class="form-control">
+                                <option value="">-- Keep Unchanged --</option>
+                                <option value="draft">Draft</option>
+                                <option value="ready_for_review">Ready for Review</option>
+                                <option value="approved">Approved</option>
+                                <option value="deprecated">Deprecated</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkPriority">Priority</label>
+                            <select id="bulkPriority" class="form-control">
+                                <option value="">-- Keep Unchanged --</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkSeverity">Severity</label>
+                            <select id="bulkSeverity" class="form-control">
+                                <option value="">-- Keep Unchanged --</option>
+                                <option value="blocker">Blocker</option>
+                                <option value="critical">Critical</option>
+                                <option value="major">Major</option>
+                                <option value="minor">Minor</option>
+                                <option value="trivial">Trivial</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkAssignee">Assigned To</label>
+                            <select id="bulkAssignee" class="form-control">
+                                <option value="">-- Keep Unchanged --</option>
+                                <!-- Will be populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkChangeSummary">Change Summary <span class="required">*</span></label>
+                            <textarea id="bulkChangeSummary" class="form-control" rows="2" required
+                                placeholder="Describe what you're changing and why"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="bulkUpdateModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmBulkUpdateBtn">Update All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Import Test Cases -->
+    <div class="modal" id="importModal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Import Test Cases</h2>
+                    <button class="modal-close" data-modal="importModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Step 1: Upload -->
+                    <div id="importStep1" class="import-step active">
+                        <h3>Step 1: Upload File</h3>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <div class="upload-icon">📁</div>
+                            <p>Drag & drop your file here or click to browse</p>
+                            <p class="file-info">Supported formats: CSV, Excel (.xlsx), JSON</p>
+                            <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls,.json" hidden>
+                            <button type="button" class="btn btn-secondary" id="browseFileBtn">Browse Files</button>
+                        </div>
+                        <div id="fileInfo" style="display: none;">
+                            <p><strong>Selected file:</strong> <span id="fileName"></span></p>
+                            <p><strong>Size:</strong> <span id="fileSize"></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Field Mapping -->
+                    <div id="importStep2" class="import-step">
+                        <h3>Step 2: Map Fields</h3>
+                        <p>Map your file columns to TestTrack fields:</p>
+                        <div id="fieldMappingContainer"></div>
+                    </div>
+
+                    <!-- Step 3: Preview & Validation -->
+                    <div id="importStep3" class="import-step">
+                        <h3>Step 3: Review & Confirm</h3>
+                        <div class="import-summary" id="importSummary"></div>
+                        <div class="import-preview" id="importPreview"></div>
+                    </div>
+
+                    <!-- Step 4: Success -->
+                    <div id="importStep4" class="import-step">
+                        <div class="import-success">
+                            <div class="success-icon">✓</div>
+                            <h3>Import Completed!</h3>
+                            <div id="importResults"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="importBackBtn" style="display: none;">←
+                        Back</button>
+                    <button type="button" class="btn btn-secondary" data-modal="importModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="importNextBtn">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Create Template -->
+    <div class="modal" id="createTemplateModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Create Template from Test Case</h2>
+                    <button class="modal-close" data-modal="createTemplateModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="createTemplateForm">
+                        <div class="form-group">
+                            <label for="templateName">Template Name <span class="required">*</span></label>
+                            <input type="text" id="templateName" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="templateCategory">Category <span class="required">*</span></label>
+                            <select id="templateCategory" class="form-control" required>
+                                <option value="Functional">Functional</option>
+                                <option value="Non-Functional">Non-Functional</option>
+                                <option value="Security">Security</option>
+                                <option value="Performance">Performance</option>
+                                <option value="UI/UX">UI/UX</option>
+                                <option value="API">API</option>
+                                <option value="Database">Database</option>
+                                <option value="Mobile">Mobile</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="templateDescription">Description</label>
+                            <textarea id="templateDescription" class="form-control" rows="3"
+                                placeholder="Describe when to use this template"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="createTemplateModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmCreateTemplateBtn">Create Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Test Case Detail with Tabs -->
+    <div class="modal" id="testCaseDetailModal">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 id="detailTestCaseId"></h2>
+                        <p id="detailTestCaseTitle"></p>
+                    </div>
+                    <button class="modal-close" data-modal="testCaseDetailModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Tabs -->
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="overview">Overview</button>
+                        <button class="tab-btn" data-tab="steps">Steps</button>
+                        <button class="tab-btn" data-tab="versions">Version History</button>
+                    </div>
+
+                    <!-- Tab Content: Overview -->
+                    <div class="tab-content active" data-tab-content="overview">
+                        <div id="testCaseOverview"></div>
+                    </div>
+
+                    <!-- Tab Content: Steps -->
+                    <div class="tab-content" data-tab-content="steps">
+                        <div id="testCaseSteps"></div>
+                    </div>
+
+                    <!-- Tab Content: Versions -->
+                    <div class="tab-content" data-tab-content="versions">
+                        <div id="testCaseVersions">
+                            <div class="loading-state">
+                                <div class="spinner"></div>
+                                Loading version history...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cloneFromDetailBtn">Clone</button>
+                    <button type="button" class="btn btn-secondary" id="createTemplateFromDetailBtn">Save as
+                        Template</button>
+                    <button type="button" class="btn btn-primary" id="editFromDetailBtn">Edit</button>
+                    <button type="button" class="btn btn-secondary" data-modal="testCaseDetailModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js?v=20260305"></script>
+    <script src="js/dashboard.js?v=20260305"></script>
+</body>
+
+</html>

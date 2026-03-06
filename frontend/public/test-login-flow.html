@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Login Flow Test</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 3px solid #333;
+        }
+
+        .success {
+            border-left-color: green;
+        }
+
+        .error {
+            border-left-color: red;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Login Flow Test</h1>
+
+    <div class="section">
+        <h2>1. Test Login</h2>
+        <button onclick="testLogin()">Login with Admin Credentials</button>
+        <div id="loginLogs"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. Check Token in Storage</h2>
+        <button onclick="checkStorage()">Check LocalStorage</button>
+        <div id="storageLogs"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. Test /users/me Endpoint</h2>
+        <button onclick="testUsersMe()">Call /users/me</button>
+        <div id="usersMeLogs"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. Test getAlllLogs</h2>
+        <button onclick="showAllLogs()">Show All Logs</button>
+        <div id="allLogs"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8001/api';
+        let allLogs = [];
+
+        function log(section, msg, data = null, isError = false) {
+            const timestamp = new Date().toISOString().split('T')[1];
+            const entry = `[${timestamp}] ${msg}`;
+            allLogs.push(entry);
+
+            const logDiv = document.getElementById(section + 'Logs');
+            const logElement = document.createElement('div');
+            logElement.className = 'log' + (isError ? ' error' : ' success');
+            logElement.textContent = entry;
+            if (data) {
+                logElement.textContent += '\n' + JSON.stringify(data, null, 2);
+            }
+            logDiv.appendChild(logElement);
+            console.log(section, entry, data);
+        }
+
+        async function testLogin() {
+            const section = 'login';
+            const logDiv = document.getElementById(section + 'Logs');
+            logDiv.innerHTML = '<div class="log">Testing login...</div>';
+
+            try {
+                log(section, 'Sending login request to ' + API_BASE_URL + '/auth/login');
+
+                const response = await fetch(API_BASE_URL + '/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@testtrack.com',
+                        password: 'Admin@123',
+                        remember_me: false
+                    })
+                });
+
+                log(section, 'Login response status: ' + response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(section, 'Login successful!', {
+                        token_length: data.access_token.length,
+                        expires_in: data.expires_in,
+                        token_type: data.token_type
+                    });
+
+                    // Store tokens
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    log(section, 'Tokens stored in localStorage');
+
+                } else {
+                    const error = await response.json();
+                    log(section, 'Login failed!', error, true);
+                }
+            } catch (error) {
+                log(section, 'Error during login: ' + error.message, error, true);
+            }
+        }
+
+        function checkStorage() {
+            const section = 'storage';
+            const logDiv = document.getElementById(section + 'Logs');
+            logDiv.innerHTML = '';
+
+            const accessToken = localStorage.getItem('access_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            log(section, 'Access Token:', {
+                exists: !!accessToken,
+                length: accessToken ? accessToken.length : 0,
+                prefix: accessToken ? accessToken.substring(0, 50) + '...' : 'NONE'
+            });
+
+            log(section, 'Refresh Token:', {
+                exists: !!refreshToken,
+                length: refreshToken ? refreshToken.length : 0,
+                prefix: refreshToken ? refreshToken.substring(0, 50) + '...' : 'NONE'
+            });
+        }
+
+        async function testUsersMe() {
+            const section = 'usersMe';
+            const logDiv = document.getElementById(section + 'Logs');
+            logDiv.innerHTML = '';
+
+            const token = localStorage.getItem('access_token');
+
+            if (!token) {
+                log(section, 'ERROR: No token found in localStorage!', null, true);
+                return;
+            }
+
+            log(section, 'Found token, preparing request...', {
+                token_length: token.length
+            });
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+
+            log(section, 'Request headers:', {
+                'Content-Type': headers['Content-Type'],
+                'Authorization_prefix': headers['Authorization'].substring(0, 30) + '...'
+            });
+
+            try {
+                log(section, 'Sending GET /users/me...');
+
+                const response = await fetch(API_BASE_URL + '/users/me', {
+                    method: 'GET',
+                    headers: headers
+                });
+
+                log(section, 'Response status: ' + response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(section, '/users/me SUCCESS!', {
+                        email: data.email,
+                        full_name: data.full_name,
+                        role: data.role
+                    });
+                } else {
+                    const error = await response.json();
+                    log(section, '/users/me FAILED!', {
+                        status: response.status,
+                        error: error
+                    }, true);
+                }
+            } catch (error) {
+                log(section, 'Error calling /users/me: ' + error.message, error, true);
+            }
+        }
+
+        function showAllLogs() {
+            const section = 'all';
+            const logDiv = document.getElementById(section + 'Logs');
+            logDiv.innerHTML = '';
+
+            allLogs.forEach(l => {
+                const logElement = document.createElement('div');
+                logElement.className = 'log';
+                logElement.textContent = l;
+                logDiv.appendChild(logElement);
+            });
+        }
+    </script>
+</body>
+
+</html>
