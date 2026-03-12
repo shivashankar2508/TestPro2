@@ -1,13 +1,13 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from dotenv import load_dotenv
 import os
 from pathlib import Path
 from app.config import settings
-from app.api.routes import auth, oauth, users, test_cases, test_suites, projects, system, backups, permissions, debug
+from app.api.routes import auth, oauth, users, test_cases, test_suites, projects, system, backups, permissions, debug, bugs
 from app.database import Base, engine
 from app.models.user import User  # Import models to ensure they're registered
 import logging
@@ -85,16 +85,39 @@ app.include_router(projects.router)
 app.include_router(system.router)
 app.include_router(backups.router)
 app.include_router(permissions.router)
+app.include_router(bugs.router)
 
 # Mount static files from frontend
-frontend_dir = Path(__file__).parent.parent.parent / "frontend" / "public"
+frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "public"
+logger.info(f"[STATIC] frontend_dir={frontend_dir}, exists={frontend_dir.exists()}")
 if frontend_dir.exists():
     from fastapi.staticfiles import StaticFiles
-    # Mount static files (CSS, JS, etc.)
-    app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
-    
-    # Mount auth directory for auth pages
+    from fastapi import HTTPException as _HTTPException
+
+    styles_dir = frontend_dir / "styles"
+    js_dir = frontend_dir / "js"
     auth_dir = frontend_dir / "auth"
+    logger.info(f"[STATIC] styles_dir exists={styles_dir.exists()}, js_dir exists={js_dir.exists()}")
+
+    # Mount the full public dir under /static (fallback)
+    app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
+
+    # Explicit handlers for /styles/* and /js/* — more reliable than StaticFiles mount on Windows
+    @app.get("/styles/{filepath:path}")
+    async def serve_styles(filepath: str):
+        file_path = styles_dir / filepath
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        raise _HTTPException(status_code=404)
+
+    @app.get("/js/{filepath:path}")
+    async def serve_js(filepath: str):
+        file_path = js_dir / filepath
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        raise _HTTPException(status_code=404)
+
+    # Mount auth directory for auth pages
     if auth_dir.exists():
         @app.get("/auth/{filename}")
         async def auth_files(filename: str):
@@ -119,6 +142,14 @@ if frontend_dir.exists():
     @app.get("/dashboard")
     async def dashboard_page():
         return FileResponse(str(frontend_dir / "dashboard.html"))
+
+    @app.get("/suite-management")
+    async def suite_management_page():
+        return FileResponse(str(frontend_dir / "suite-management.html"))
+
+    @app.get("/suite-management.html")
+    async def suite_management_page_html():
+        return FileResponse(str(frontend_dir / "suite-management.html"))
     
     @app.get("/admin")
     async def admin_page():
@@ -128,6 +159,11 @@ if frontend_dir.exists():
     async def index():
         return FileResponse(str(frontend_dir / "index.html"))
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        # Return empty icon response to prevent noisy 404s in browser console.
+        return Response(status_code=204)
+
 @app.get("/api/health")
 async def health_check():
     return {
@@ -136,6 +172,18 @@ async def health_check():
         "version": settings.APP_VERSION,
         "environment": settings.ENV
     }
+
+@app.get("/api/debug-routes")
+async def debug_routes():
+    routes_info = []
+    for route in app.routes:
+        route_info = {"type": type(route).__name__}
+        if hasattr(route, "path"):
+            route_info["path"] = route.path
+        elif hasattr(route, "url_path"):
+            route_info["path"] = str(route.url_path)
+        routes_info.append(route_info)
+    return {"routes": routes_info}
 
 @app.get("/api")
 async def root():

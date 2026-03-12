@@ -1,5 +1,5 @@
 // API Service Layer - Handles all backend API calls
-const API_BASE_URL = 'http://localhost:8001/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 // ============ Auth Helper ============
 function getAuthHeaders() {
@@ -29,7 +29,7 @@ function handleApiError(error) {
         isDashboardInitializing: isDashboardInitializing,
         timestamp: new Date().toISOString()
     });
-    
+
     // Handle 401 and 403 - but DON'T redirect during dashboard initialization
     // Just throw the error and let the dashboard retry logic handle it
     if ((error.status === 401 || error.status === 403) && !isDashboardInitializing) {
@@ -41,27 +41,27 @@ function handleApiError(error) {
         }, 500);
         throw new Error('Session expired. Please log in again.');
     }
-    
+
     throw error;
 }
 
 // ============ Generic API Call ============
 async function apiCall(endpoint, options = {}) {
     console.log('[API] Request:', { endpoint, method: options.method || 'GET', timestamp: new Date().toISOString() });
-    
+
     try {
         const finalHeaders = {
             ...getAuthHeaders(),
             ...options.headers
         };
-        
+
         console.log('[API] Final Headers Being Sent:', {
             'Content-Type': finalHeaders['Content-Type'],
             'Authorization_Prefix': finalHeaders['Authorization'] ? finalHeaders['Authorization'].substring(0, 50) + '...' : 'MISSING',
             'Authorization_Exists': !!finalHeaders['Authorization'],
             allHeaders: Object.keys(finalHeaders)
         });
-        
+
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
             headers: finalHeaders
@@ -126,7 +126,12 @@ const UsersAPI = {
     },
 
     async getTesterUsers() {
-        return this.listUsers('tester');
+        try {
+            return await apiCall('/users/testers');
+        } catch (error) {
+            // Fallback for older backend deployments.
+            return this.listUsers('tester');
+        }
     }
 };
 
@@ -364,6 +369,10 @@ const ExecutionAPI = {
         });
     },
 
+    async getSteps(executionId) {
+        return apiCall(`/test-cases/executions/${executionId}/steps`);
+    },
+
     async complete(executionId) {
         return apiCall(`/test-cases/executions/${executionId}/complete`, {
             method: 'POST'
@@ -372,6 +381,10 @@ const ExecutionAPI = {
 
     async history(testCaseId) {
         return apiCall(`/test-cases/${testCaseId}/executions/history`);
+    },
+
+    async compare(executionId) {
+        return apiCall(`/test-cases/executions/${executionId}/compare`);
     },
 
     async reexecute(testCaseId, payload = {}) {
@@ -454,6 +467,41 @@ const TestRunsAPI = {
             method: 'PUT',
             body: JSON.stringify({ tester_ids: testerIds })
         });
+    }
+};
+
+// ============ Bug Reports API ============
+const BugsAPI = {
+    async list(filters = {}) {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+                params.append(key, value);
+            }
+        });
+        return apiCall(`/bugs?${params.toString()}`);
+    },
+
+    async create(payload) {
+        return apiCall('/bugs', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async get(bugId) {
+        return apiCall(`/bugs/${bugId}`);
+    },
+
+    async updateStatus(bugId, status) {
+        return apiCall(`/bugs/${bugId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ status })
+        });
+    },
+
+    async getAssignees() {
+        return apiCall('/bugs/meta/assignees');
     }
 };
 
@@ -605,7 +653,23 @@ const PermissionsAPI = {
 };
 
 // ============ Export all APIs ============
+function legacyApiCall(endpoint, method = 'GET', data = null) {
+    // Backward compatibility for pages still calling API.apiCall('/api/...', 'METHOD', data)
+    let normalizedEndpoint = endpoint || '';
+    if (normalizedEndpoint.startsWith('/api/')) {
+        normalizedEndpoint = normalizedEndpoint.substring(4);
+    }
+
+    const options = { method };
+    if (data !== null && data !== undefined && method !== 'GET' && method !== 'HEAD') {
+        options.body = JSON.stringify(data);
+    }
+
+    return apiCall(normalizedEndpoint, options);
+}
+
 window.API = {
+    apiCall: legacyApiCall,
     Auth: AuthAPI,
     Users: UsersAPI,
     TestCases: TestCasesAPI,
@@ -615,6 +679,7 @@ window.API = {
     TestSteps: TestStepsAPI,
     Execution: ExecutionAPI,
     TestRuns: TestRunsAPI,
+    Bugs: BugsAPI,
     Projects: ProjectsAPI,
     System: SystemAPI,
     Backups: BackupsAPI,

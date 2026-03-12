@@ -1,6 +1,6 @@
 // Auth JavaScript - Handle login and registration
 
-const API_URL = 'http://localhost:8001/api';
+const API_URL = `${window.location.origin}/api`;
 
 // ============ Password Visibility Toggle ============
 document.querySelectorAll('.toggle-password').forEach(button => {

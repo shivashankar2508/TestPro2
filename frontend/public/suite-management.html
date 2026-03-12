@@ -694,7 +694,7 @@
         <span id="notificationMessage"></span>
     </div>
 
-    <script src="/js/api.js"></script>
+    <script src="/js/api.js?v=20260312"></script>
     <script>
         let allSuites = [];
         let allTestCases = [];
@@ -702,7 +702,22 @@
         let editingSuiteId = null;
 
         // Load on page load
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                await API.Auth.getCurrentUser();
+            } catch (error) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                window.location.href = '/login';
+                return;
+            }
+
             loadSuites();
             loadTestCases();
         });
@@ -725,9 +740,10 @@
         async function loadTestCases() {
             try {
                 const response = await API.apiCall('/api/test-cases/', 'GET');
-                allTestCases = response;
+                allTestCases = Array.isArray(response) ? response : (response.test_cases || []);
             } catch (error) {
                 console.error('Error loading test cases:', error);
+                allTestCases = [];
             }
         }
 

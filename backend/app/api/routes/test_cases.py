@@ -16,15 +16,16 @@ from app.models.test_case import (
     TestCase, TestStep, Tag, TestExecution, TestCaseAttachment,
     TestCaseVersionHistory, TestCaseTemplate, TestCaseImportBatch,
     TestRun, TestRunItem, ExecutionEvidence, ExecutionTimerSession,
+    ExecutionStepResult, BugReport,
     TestCaseStatusEnum, PriorityEnum, SeverityEnum, TestTypeEnum,
-    AutomationStatusEnum, StepStatusEnum
+    AutomationStatusEnum, StepStatusEnum, BugStatusEnum
 )
 from app.schemas.test_case import (
     TestCaseCreate, TestCaseUpdate, TestCaseResponse, TestCaseListResponse,
     PaginatedTestCasesResponse, TestCaseStatsResponse,
     TestStepCreate, TestStepUpdate, TestStepResponse,
     TagCreate, TagResponse,
-    TestExecutionCreate, TestExecutionResponse,
+    TestExecutionCreate, TestExecutionResponse, ExecutionStepResultResponse,
     TestCaseVersionHistoryResponse, CloneTestCaseRequest, DeleteTestCaseRequest,
     CreateTemplateRequest, TestCaseTemplateResponse, CreateFromTemplateRequest,
     BulkUpdateRequest, BulkDeleteRequest,
@@ -146,6 +147,117 @@ def compute_run_progress(items: List[TestRunItem]) -> dict:
         "not_executed": not_executed_count,
         "progress_percent": progress_percent,
     }
+
+
+def generate_bug_id(db: Session) -> str:
+    year = datetime.utcnow().year
+    count = db.query(BugReport).filter(BugReport.bug_id.like(f"BUG-{year}-%")).count()
+    return f"BUG-{year}-{str(count + 1).zfill(5)}"
+
+
+def serialize_execution_step_result(step_result: ExecutionStepResult) -> dict:
+    return {
+        "id": step_result.id,
+        "execution_id": step_result.execution_id,
+        "step_id": step_result.step_id,
+        "step_number": step_result.step_number,
+        "action": step_result.action,
+        "test_data": step_result.test_data,
+        "expected_result": step_result.expected_result,
+        "actual_result": step_result.actual_result,
+        "status": step_result.status,
+        "notes": step_result.notes,
+        "created_at": step_result.created_at,
+        "updated_at": step_result.updated_at,
+    }
+
+
+def ensure_execution_step_results(db: Session, execution: TestExecution, test_case: TestCase) -> List[ExecutionStepResult]:
+    existing = db.query(ExecutionStepResult).filter(
+        ExecutionStepResult.execution_id == execution.id
+    ).order_by(ExecutionStepResult.step_number.asc()).all()
+    if existing:
+        return existing
+
+    results = []
+    for step in test_case.steps:
+        result = ExecutionStepResult(
+            execution_id=execution.id,
+            step_id=step.id,
+            step_number=step.step_number,
+            action=step.action,
+            test_data=step.test_data,
+            expected_result=step.expected_result,
+            actual_result=None,
+            status=StepStatusEnum.NOT_EXECUTED.value,
+            notes=None,
+        )
+        db.add(result)
+        results.append(result)
+
+    db.flush()
+    return results
+
+
+def update_execution_counters(execution: TestExecution, step_results: List[ExecutionStepResult]) -> None:
+    statuses = [step_result.status for step_result in step_results]
+    execution.pass_count = len([value for value in statuses if value == StepStatusEnum.PASS.value])
+    execution.fail_count = len([value for value in statuses if value == StepStatusEnum.FAIL.value])
+    execution.blocked_count = len([value for value in statuses if value == StepStatusEnum.BLOCKED.value])
+    execution.skipped_count = len([value for value in statuses if value == StepStatusEnum.SKIPPED.value])
+
+    if execution.fail_count > 0:
+        execution.status = StepStatusEnum.FAIL.value
+    elif execution.blocked_count > 0:
+        execution.status = StepStatusEnum.BLOCKED.value
+    elif any(value == StepStatusEnum.NOT_EXECUTED.value for value in statuses):
+        execution.status = StepStatusEnum.NOT_EXECUTED.value
+    elif execution.pass_count > 0 and execution.pass_count == len(statuses):
+        execution.status = StepStatusEnum.PASS.value
+    elif execution.skipped_count == len(statuses) and len(statuses) > 0:
+        execution.status = StepStatusEnum.SKIPPED.value
+    else:
+        execution.status = StepStatusEnum.NOT_EXECUTED.value
+
+
+def serialize_execution_summary(execution: TestExecution) -> dict:
+    return {
+        "id": execution.id,
+        "test_case_id": execution.test_case_id,
+        "status": execution.status,
+        "execution_date": execution.execution_date,
+        "execution_duration": execution.execution_duration,
+        "pass_count": execution.pass_count,
+        "fail_count": execution.fail_count,
+        "blocked_count": execution.blocked_count,
+        "skipped_count": execution.skipped_count,
+        "notes": execution.notes,
+        "bug_ids": execution.bug_ids,
+        "created_at": execution.created_at,
+    }
+
+
+def build_execution_comparison(current_results: List[ExecutionStepResult], previous_results: List[ExecutionStepResult]) -> List[dict]:
+    previous_by_step = {result.step_number: result for result in previous_results}
+    comparison = []
+    for current in current_results:
+        previous = previous_by_step.get(current.step_number)
+        comparison.append({
+            "step_number": current.step_number,
+            "action": current.action,
+            "expected_result": current.expected_result,
+            "current": {
+                "status": current.status,
+                "actual_result": current.actual_result,
+                "notes": current.notes,
+            },
+            "previous": {
+                "status": previous.status if previous else None,
+                "actual_result": previous.actual_result if previous else None,
+                "notes": previous.notes if previous else None,
+            }
+        })
+    return comparison
 
 
 # ============ Test Case CRUD ============
@@ -661,6 +773,7 @@ async def start_test_execution(
         is_running=True
     )
     db.add(timer)
+    ensure_execution_step_results(db, execution, test_case)
     db.commit()
     db.refresh(execution)
 
@@ -670,6 +783,54 @@ async def start_test_execution(
         "started_at": timer.started_at,
         "status": execution.status,
         "message": "Execution started"
+    }
+
+
+@router.get("/executions/{execution_id}/steps", response_model=List[ExecutionStepResultResponse])
+async def get_execution_steps(
+    execution_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+    if not execution:
+        raise ResourceNotFoundError("Execution")
+
+    test_case = db.query(TestCase).filter(TestCase.id == execution.test_case_id).first()
+    if not test_case:
+        raise ResourceNotFoundError("Test case")
+
+    return ensure_execution_step_results(db, execution, test_case)
+
+
+@router.get("/executions/{execution_id}/compare", status_code=status.HTTP_200_OK)
+async def compare_execution_with_previous(
+    execution_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    execution = db.query(TestExecution).filter(TestExecution.id == execution_id).first()
+    if not execution:
+        raise ResourceNotFoundError("Execution")
+
+    previous = db.query(TestExecution).filter(
+        TestExecution.test_case_id == execution.test_case_id,
+        TestExecution.created_at < execution.created_at
+    ).order_by(TestExecution.created_at.desc()).first()
+
+    current_results = db.query(ExecutionStepResult).filter(
+        ExecutionStepResult.execution_id == execution.id
+    ).order_by(ExecutionStepResult.step_number.asc()).all()
+    previous_results = []
+    if previous:
+        previous_results = db.query(ExecutionStepResult).filter(
+            ExecutionStepResult.execution_id == previous.id
+        ).order_by(ExecutionStepResult.step_number.asc()).all()
+
+    return {
+        "current_execution": serialize_execution_summary(execution),
+        "previous_execution": serialize_execution_summary(previous) if previous else None,
+        "comparison": build_execution_comparison(current_results, previous_results),
     }
 
 
@@ -685,37 +846,28 @@ async def autosave_execution_step(
     if not execution:
         raise ResourceNotFoundError("Execution")
 
-    step = db.query(TestStep).filter(TestStep.id == step_id, TestStep.test_case_id == execution.test_case_id).first()
-    if not step:
-        raise ResourceNotFoundError("Step")
+    step_result = db.query(ExecutionStepResult).filter(
+        ExecutionStepResult.execution_id == execution.id,
+        ExecutionStepResult.step_id == step_id
+    ).first()
+    if not step_result:
+        raise ResourceNotFoundError("Execution step")
 
-    step.status = payload.status.value if hasattr(payload.status, "value") else payload.status
-    step.actual_result = payload.actual_result
-    step.notes = payload.notes
-    step.updated_at = datetime.utcnow()
+    step_result.status = payload.status.value if hasattr(payload.status, "value") else payload.status
+    step_result.actual_result = payload.actual_result
+    step_result.notes = payload.notes
+    step_result.updated_at = datetime.utcnow()
 
-    steps = db.query(TestStep).filter(TestStep.test_case_id == execution.test_case_id).all()
-    statuses = [s.status for s in steps]
-    execution.pass_count = len([s for s in statuses if s == StepStatusEnum.PASS.value])
-    execution.fail_count = len([s for s in statuses if s == StepStatusEnum.FAIL.value])
-    execution.blocked_count = len([s for s in statuses if s == StepStatusEnum.BLOCKED.value])
-    execution.skipped_count = len([s for s in statuses if s == StepStatusEnum.SKIPPED.value])
-    if execution.fail_count > 0:
-        execution.status = StepStatusEnum.FAIL.value
-    elif execution.blocked_count > 0:
-        execution.status = StepStatusEnum.BLOCKED.value
-    elif any(s == StepStatusEnum.NOT_EXECUTED.value for s in statuses):
-        execution.status = StepStatusEnum.NOT_EXECUTED.value
-    elif execution.pass_count > 0 and execution.pass_count == len(statuses):
-        execution.status = StepStatusEnum.PASS.value
-    else:
-        execution.status = StepStatusEnum.SKIPPED.value
+    step_results = db.query(ExecutionStepResult).filter(
+        ExecutionStepResult.execution_id == execution.id
+    ).all()
+    update_execution_counters(execution, step_results)
 
     db.commit()
 
     return {
         "execution_id": execution.id,
-        "step_id": step.id,
+        "step_id": step_result.step_id,
         "saved": True,
         "overall_status": execution.status,
         "pass_count": execution.pass_count,
@@ -747,6 +899,12 @@ async def complete_execution(
         timer.is_running = False
         execution.execution_duration = calculate_execution_duration_minutes(timer)
 
+    step_results = db.query(ExecutionStepResult).filter(
+        ExecutionStepResult.execution_id == execution.id
+    ).all()
+    if step_results:
+        update_execution_counters(execution, step_results)
+
     execution.execution_date = datetime.utcnow()
     db.commit()
     db.refresh(execution)
@@ -771,22 +929,7 @@ async def execution_history(
     rows = db.query(TestExecution).filter(
         TestExecution.test_case_id == test_case_id
     ).order_by(TestExecution.created_at.desc()).all()
-    return [
-        {
-            "id": e.id,
-            "test_case_id": e.test_case_id,
-            "status": e.status,
-            "execution_date": e.execution_date,
-            "execution_duration": e.execution_duration,
-            "pass_count": e.pass_count,
-            "fail_count": e.fail_count,
-            "blocked_count": e.blocked_count,
-            "skipped_count": e.skipped_count,
-            "notes": e.notes,
-            "bug_ids": e.bug_ids,
-        }
-        for e in rows
-    ]
+    return [serialize_execution_summary(e) for e in rows]
 
 
 @router.post("/{test_case_id}/executions/reexecute", status_code=status.HTTP_201_CREATED)
@@ -822,20 +965,12 @@ async def reexecute_test_case(
         is_running=True
     )
     db.add(timer)
+    ensure_execution_step_results(db, execution, test_case)
     db.commit()
 
     return {
         "execution_id": execution.id,
-        "previous_execution": {
-            "id": previous.id,
-            "status": previous.status,
-            "execution_date": previous.execution_date,
-            "execution_duration": previous.execution_duration,
-            "pass_count": previous.pass_count,
-            "fail_count": previous.fail_count,
-            "blocked_count": previous.blocked_count,
-            "skipped_count": previous.skipped_count,
-        } if previous else None,
+        "previous_execution": serialize_execution_summary(previous) if previous else None,
         "message": "Re-execution started"
     }
 
@@ -856,25 +991,64 @@ async def fail_and_create_bug(
     if not step:
         raise ResourceNotFoundError("Step")
 
-    step.status = StepStatusEnum.FAIL.value
-    step.actual_result = payload.description or payload.summary
-    step.notes = payload.description
+    step_result = db.query(ExecutionStepResult).filter(
+        ExecutionStepResult.execution_id == execution.id,
+        ExecutionStepResult.step_id == step.id
+    ).first()
+    if not step_result:
+        raise ResourceNotFoundError("Execution step")
 
-    bug_id = f"BUG-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+    step_result.status = StepStatusEnum.FAIL.value
+    step_result.actual_result = payload.actual_behavior or payload.description or payload.summary
+    step_result.notes = payload.description
+    step_result.updated_at = datetime.utcnow()
+
+    bug_identifier = generate_bug_id(db)
     existing_bug_ids = [b.strip() for b in (execution.bug_ids or "").split(",") if b.strip()]
-    existing_bug_ids.append(bug_id)
+    existing_bug_ids.append(bug_identifier)
     execution.bug_ids = ", ".join(existing_bug_ids)
     execution.status = StepStatusEnum.FAIL.value
 
+    test_case = db.query(TestCase).filter(TestCase.id == execution.test_case_id).first()
+    bug_report = BugReport(
+        bug_id=bug_identifier,
+        title=payload.summary,
+        description=payload.description or payload.summary,
+        steps_to_reproduce=payload.steps_to_reproduce or (
+            f"1. Open {test_case.test_case_id if test_case else execution.test_case_id}\n"
+            f"2. Execute step {step.step_number}: {step.action}"
+        ),
+        expected_behavior=payload.expected_behavior or step.expected_result,
+        actual_behavior=payload.actual_behavior or step_result.actual_result or payload.summary,
+        severity=(test_case.severity if test_case else SeverityEnum.MAJOR.value),
+        priority=(test_case.priority if test_case else PriorityEnum.MEDIUM.value),
+        status=BugStatusEnum.NEW.value,
+        environment=execution.environment,
+        affected_version=payload.affected_version,
+        created_by_id=current_user.id,
+        assigned_to_id=payload.assigned_to_id,
+        linked_test_case_id=execution.test_case_id,
+        linked_execution_id=execution.id,
+        linked_step_id=step.id,
+    )
+    db.add(bug_report)
+
+    step_results = db.query(ExecutionStepResult).filter(
+        ExecutionStepResult.execution_id == execution.id
+    ).all()
+    update_execution_counters(execution, step_results)
+
     db.commit()
+    db.refresh(bug_report)
 
     return {
         "execution_id": execution.id,
         "step_id": step.id,
         "bug": {
-            "id": bug_id,
-            "summary": payload.summary,
-            "description": payload.description,
+            "id": bug_report.bug_id,
+            "summary": bug_report.title,
+            "description": bug_report.description,
+            "status": bug_report.status,
             "linked_test_case_id": execution.test_case_id,
             "linked_step_id": step.id,
             "created_by_id": current_user.id,

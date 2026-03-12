@@ -1,7 +1,7 @@
 // OAuth Integration - Google and GitHub login
 
-const API_URL = 'http://localhost:8001/api';
-const FRONTEND_URL = 'http://localhost:3000';
+const API_URL = `${window.location.origin}/api`;
+const FRONTEND_URL = window.location.origin;
 
 // ============ OAuth Button Handlers ============
 

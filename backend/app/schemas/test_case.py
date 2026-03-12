@@ -232,6 +232,24 @@ class TestExecutionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class ExecutionStepResultResponse(BaseModel):
+    id: int
+    execution_id: int
+    step_id: Optional[int]
+    step_number: int
+    action: str
+    test_data: Optional[str]
+    expected_result: str
+    actual_result: Optional[str]
+    status: StepStatusEnum
+    notes: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # ============ Pagination Schema ============
 
 class PaginatedTestCasesResponse(BaseModel):
@@ -343,6 +361,11 @@ class StepExecutionUpdateRequest(BaseModel):
 class FailAndCreateBugRequest(BaseModel):
     summary: str = Field(..., min_length=3, max_length=300)
     description: Optional[str] = None
+    expected_behavior: Optional[str] = None
+    actual_behavior: Optional[str] = None
+    steps_to_reproduce: Optional[str] = None
+    affected_version: Optional[str] = Field(None, max_length=100)
+    assigned_to_id: Optional[int] = None
 
 
 class ManualDurationRequest(BaseModel):

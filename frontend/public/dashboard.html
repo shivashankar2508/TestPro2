@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - TestTrack Pro</title>
-    <link rel="stylesheet" href="styles/dashboard.css">
+    <link rel="stylesheet" href="styles/dashboard.css?v=20260314">
 </head>
 
 <body>
@@ -78,6 +78,29 @@
                     </button>
                 </div>
             </header>
+
+            <section class="kpi-strip" aria-label="Executive quality indicators">
+                <article class="kpi-card kpi-total-cases">
+                    <p class="kpi-label">Total Test Cases</p>
+                    <p class="kpi-value" id="kpiTotalCases">0</p>
+                    <p class="kpi-meta" id="kpiApprovedCases">0 approved</p>
+                </article>
+                <article class="kpi-card kpi-open-bugs">
+                    <p class="kpi-label">Open Bug Queue</p>
+                    <p class="kpi-value" id="kpiOpenBugs">0</p>
+                    <p class="kpi-meta">new, open, in progress, reopened</p>
+                </article>
+                <article class="kpi-card kpi-executions">
+                    <p class="kpi-label">Recent Executions</p>
+                    <p class="kpi-value" id="kpiRecentExecutions">0</p>
+                    <p class="kpi-meta" id="kpiExecutionMeta">Fail rate 0.0%</p>
+                </article>
+                <article class="kpi-card kpi-updated">
+                    <p class="kpi-label">Last Refresh</p>
+                    <p class="kpi-value" id="kpiLastUpdated">--</p>
+                    <p class="kpi-meta">auto-sync from live dashboard data</p>
+                </article>
+            </section>
 
             <!-- Test Cases View -->
             <div id="testCasesView" class="view-container active">
@@ -333,11 +356,32 @@
                                 <th>Duration (min)</th>
                                 <th>Pass/Fail/Blocked/Skipped</th>
                                 <th>Date</th>
+                                <th>Compare</th>
                             </tr>
                         </thead>
                         <tbody id="executionHistoryBody">
                             <tr>
-                                <td colspan="5" class="text-center">No execution history loaded</td>
+                                <td colspan="6" class="text-center">No execution history loaded</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-container" style="margin-top: 16px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Step #</th>
+                                <th>Action</th>
+                                <th>Expected</th>
+                                <th>Current Result</th>
+                                <th>Previous Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="executionComparisonBody">
+                            <tr>
+                                <td colspan="5" class="text-center">Select a compared execution to view side-by-side
+                                    results</td>
                             </tr>
                         </tbody>
                     </table>
@@ -348,7 +392,125 @@
             <div id="bugsView" class="view-container">
                 <div class="toolbar">
                     <div class="filters" style="width: 100%; display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="bugSearchInput" class="search-input"
+                            placeholder="Search bug ID or title...">
+                        <select id="bugFilterStatus" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="new">New</option>
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="fixed">Fixed</option>
+                            <option value="verified">Verified</option>
+                            <option value="closed">Closed</option>
+                            <option value="reopened">Reopened</option>
+                            <option value="wont_fix">Won't Fix</option>
+                            <option value="duplicate">Duplicate</option>
+                        </select>
+                        <select id="bugFilterPriority" class="filter-select">
+                            <option value="">All Priorities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <select id="bugFilterSeverity" class="filter-select">
+                            <option value="">All Severities</option>
+                            <option value="blocker">Blocker</option>
+                            <option value="critical">Critical</option>
+                            <option value="major">Major</option>
+                            <option value="minor">Minor</option>
+                            <option value="trivial">Trivial</option>
+                        </select>
+                        <select id="bugSortBy" class="filter-select">
+                            <option value="created_at">Newest</option>
+                            <option value="age">Age</option>
+                            <option value="priority">Priority</option>
+                            <option value="severity">Severity</option>
+                            <option value="due_date">Due Date</option>
+                        </select>
+                        <label style="display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="bugMineOnly">
+                            Mine only
+                        </label>
                         <button class="btn btn-secondary" id="refreshBugsBtn">Refresh Bug Reports</button>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugCreateTitle">Bug Title</label>
+                        <input type="text" id="bugCreateTitle" class="form-control"
+                            placeholder="Login fails with valid credentials on Chrome">
+                    </div>
+                    <div class="form-group" style="max-width: 200px;">
+                        <label for="bugCreatePriority">Priority</label>
+                        <select id="bugCreatePriority" class="form-control">
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="max-width: 200px;">
+                        <label for="bugCreateSeverity">Severity</label>
+                        <select id="bugCreateSeverity" class="form-control">
+                            <option value="blocker">Blocker</option>
+                            <option value="critical">Critical</option>
+                            <option value="major" selected>Major</option>
+                            <option value="minor">Minor</option>
+                            <option value="trivial">Trivial</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugCreateDescription">Description</label>
+                        <textarea id="bugCreateDescription" class="form-control" rows="2"
+                            placeholder="Detailed bug description"></textarea>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugCreateSteps">Steps To Reproduce</label>
+                        <textarea id="bugCreateSteps" class="form-control" rows="2"
+                            placeholder="1. Open page...&#10;2. Click..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugCreateExpected">Expected Behavior</label>
+                        <textarea id="bugCreateExpected" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugCreateActual">Actual Behavior</label>
+                        <textarea id="bugCreateActual" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 16px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bugCreateEnvironment">Environment</label>
+                        <input type="text" id="bugCreateEnvironment" class="form-control"
+                            placeholder="Chrome 120, Windows 11, QA">
+                    </div>
+                    <div class="form-group" style="max-width: 180px;">
+                        <label for="bugCreateVersion">Affected Version</label>
+                        <input type="text" id="bugCreateVersion" class="form-control" placeholder="v2.4.1">
+                    </div>
+                    <div class="form-group" style="max-width: 220px;">
+                        <label for="bugCreateAssignedTo">Assign To</label>
+                        <select id="bugCreateAssignedTo" class="form-control">
+                            <option value="">Unassigned</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="max-width: 240px;">
+                        <label for="bugCreateLinkedTestCase">Linked Test Case</label>
+                        <select id="bugCreateLinkedTestCase" class="form-control">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end;">
+                        <button class="btn btn-primary" id="createBugBtn">Create Bug</button>
                     </div>
                 </div>
 
@@ -357,15 +519,20 @@
                         <thead>
                             <tr>
                                 <th>Bug ID</th>
-                                <th>Test Case</th>
-                                <th>Execution ID</th>
+                                <th>Title</th>
+                                <th>Priority</th>
+                                <th>Severity</th>
                                 <th>Status</th>
-                                <th>Execution Date</th>
+                                <th>Assigned To</th>
+                                <th>Test Case</th>
+                                <th>Attachments</th>
+                                <th>Created</th>
+                                <th>Quick Update</th>
                             </tr>
                         </thead>
                         <tbody id="bugsTableBody">
                             <tr>
-                                <td colspan="5" class="text-center">No bug reports loaded</td>
+                                <td colspan="10" class="text-center">No bug reports loaded</td>
                             </tr>
                         </tbody>
                     </table>
@@ -843,8 +1010,8 @@
         </div>
     </div>
 
-    <script src="js/api.js?v=20260305"></script>
-    <script src="js/dashboard.js?v=20260305"></script>
+    <script src="js/api.js?v=20260312"></script>
+    <script src="js/dashboard.js?v=20260312"></script>
 </body>
 
 </html>

@@ -58,6 +58,18 @@ class SuiteExecutionModeEnum(str, enum.Enum):
     SEQUENTIAL = "sequential"
     PARALLEL = "parallel"
 
+
+class BugStatusEnum(str, enum.Enum):
+    NEW = "new"
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    FIXED = "fixed"
+    VERIFIED = "verified"
+    CLOSED = "closed"
+    REOPENED = "reopened"
+    WONT_FIX = "wont_fix"
+    DUPLICATE = "duplicate"
+
 # ============ Association Tables ============
 
 test_case_tags = Table(
@@ -222,6 +234,28 @@ class TestExecution(Base):
     executed_by = relationship("User")
     evidences = relationship("ExecutionEvidence", back_populates="execution", cascade="all, delete-orphan")
     timer_sessions = relationship("ExecutionTimerSession", back_populates="execution", cascade="all, delete-orphan")
+    step_results = relationship("ExecutionStepResult", back_populates="execution", cascade="all, delete-orphan", order_by="ExecutionStepResult.step_number")
+    linked_bugs = relationship("BugReport", back_populates="execution")
+
+
+class ExecutionStepResult(Base):
+    __tablename__ = "execution_step_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    execution_id = Column(Integer, ForeignKey("test_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    step_id = Column(Integer, ForeignKey("test_steps.id", ondelete="SET NULL"), nullable=True, index=True)
+    step_number = Column(Integer, nullable=False)
+    action = Column(Text, nullable=False)
+    test_data = Column(Text, nullable=True)
+    expected_result = Column(Text, nullable=False)
+    actual_result = Column(Text, nullable=True)
+    status = Column(String(50), default=StepStatusEnum.NOT_EXECUTED.value, nullable=False)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    execution = relationship("TestExecution", back_populates="step_results")
+    step = relationship("TestStep")
 
 # ============ Test Case Attachment Model ============
 
@@ -346,6 +380,37 @@ class ExecutionEvidence(Base):
     test_case = relationship("TestCase")
     step = relationship("TestStep")
     uploaded_by = relationship("User")
+
+
+class BugReport(Base):
+    __tablename__ = "bug_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bug_id = Column(String(50), unique=True, nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    steps_to_reproduce = Column(Text, nullable=False)
+    expected_behavior = Column(Text, nullable=False)
+    actual_behavior = Column(Text, nullable=False)
+    severity = Column(String(50), default=SeverityEnum.MAJOR.value, nullable=False)
+    priority = Column(String(50), default=PriorityEnum.MEDIUM.value, nullable=False)
+    status = Column(String(50), default=BugStatusEnum.NEW.value, nullable=False)
+    environment = Column(String(255), nullable=True)
+    affected_version = Column(String(100), nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assigned_to_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    linked_test_case_id = Column(Integer, ForeignKey("test_cases.id", ondelete="SET NULL"), nullable=True)
+    linked_execution_id = Column(Integer, ForeignKey("test_executions.id", ondelete="SET NULL"), nullable=True)
+    linked_step_id = Column(Integer, ForeignKey("test_steps.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    assigned_to = relationship("User", foreign_keys=[assigned_to_id])
+    test_case = relationship("TestCase")
+    execution = relationship("TestExecution", back_populates="linked_bugs")
+    step = relationship("TestStep")
 
 
 class ExecutionTimerSession(Base):

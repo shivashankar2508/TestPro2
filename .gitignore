@@ -58,6 +58,10 @@ build/
 logs/
 *.log
 
+# Runtime artifacts
+backend/uploads/execution_evidence/
+backend/backups/
+
 # Testing
 .pytest_cache/
 .coverage

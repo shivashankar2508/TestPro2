@@ -13,22 +13,25 @@ let selectedExecutionStepId = null;
 let executionTimerInterval = null;
 let executionTimerStart = null;
 let executionAccumulatedSeconds = 0;
+let allBugAssignees = [];
+
+const OPEN_BUG_STATUSES = new Set(['new', 'open', 'in_progress', 'reopened']);
 
 // ============ Initialize Dashboard ============
 document.addEventListener('DOMContentLoaded', async () => {
     // Set flag so API errors don't immediately redirect
     isDashboardInitializing = true;
-    
+
     console.log('[Dashboard] Initializing at', new Date().toISOString());
-    
+
     // Check authentication
     const token = localStorage.getItem('access_token');
-    console.log('[Dashboard] Token check:', { 
-        hasToken: !!token, 
+    console.log('[Dashboard] Token check:', {
+        hasToken: !!token,
         tokenLength: token ? token.length : 0,
         tokenPrefix: token ? token.substring(0, 50) : 'NONE'
     });
-    
+
     if (!token) {
         console.log('[Dashboard] No token found, redirecting to login');
         isDashboardInitializing = false;
@@ -42,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let currentUserData = null;
         let attemptCount = 0;
         const maxAttempts = 3;
-        
+
         while (!currentUserData && attemptCount < maxAttempts) {
             attemptCount++;
             try {
@@ -58,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     stack: userError.stack,
                     response: userError.response || 'N/A'
                 });
-                
+
                 if (attemptCount < maxAttempts) {
                     console.log(`[Dashboard] Retrying in 500ms...`);
                     await new Promise(resolve => setTimeout(resolve, 500));
@@ -68,11 +71,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         }
-        
+
         if (!currentUserData) {
             throw new Error('Could not load current user after ' + maxAttempts + ' attempts');
         }
-        
+
         currentUser = currentUserData;
         displayUserInfo();
 
@@ -80,9 +83,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[Dashboard] Loading test cases...');
         await loadTestCases();
         console.log('[Dashboard] Loaded', allTestCases.length, 'test cases');
-        
+
         console.log('[Dashboard] Loading testers...');
         await loadTesters();
+
+        console.log('[Dashboard] Loading bug assignees...');
+        await loadBugAssignees();
+
+        console.log('[Dashboard] Refreshing executive KPIs...');
+        await refreshDashboardExecutiveKpis();
 
         // Setup event listeners
         setupEventListeners();
@@ -90,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupNavigationHandlers();
 
         console.log('[Dashboard] Initialization complete at', new Date().toISOString());
-        
+
         // Now allow redirects on auth errors
         isDashboardInitializing = false;
     } catch (error) {
@@ -100,11 +109,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             stack: error.stack,
             fullError: error
         });
-        
+
         // Show error message
         const msg = error.message || 'Failed to load dashboard. Please check console for details.';
         console.error('[Dashboard]', msg);
-        
+
         // Display error in UI if possible
         const container = document.querySelector('.dashboard-container');
         if (container) {
@@ -119,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         }
-        
+
         isDashboardInitializing = false;
         showNotification('Failed to load dashboard', 'error');
     }
@@ -129,12 +138,95 @@ document.addEventListener('DOMContentLoaded', async () => {
 function displayUserInfo() {
     document.getElementById('userName').textContent = currentUser.full_name || currentUser.email;
     document.getElementById('userRole').textContent = currentUser.role || 'User';
-    
+
     // Show admin link if user is admin
     const adminLink = document.getElementById('adminLink');
     if (adminLink && currentUser.role === 'admin') {
         adminLink.style.display = 'flex';
     }
+}
+
+function setKpiValue(id, value) {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.textContent = value;
+}
+
+function touchKpiLastUpdated() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    setKpiValue('kpiLastUpdated', `${hours}:${minutes}`);
+}
+
+function updateDashboardCaseKpis() {
+    const totalCases = allTestCases.length;
+    const approvedCases = allTestCases.filter((testCase) => testCase.status === 'approved').length;
+    setKpiValue('kpiTotalCases', String(totalCases));
+    setKpiValue('kpiApprovedCases', `${approvedCases} approved`);
+    touchKpiLastUpdated();
+}
+
+function setDashboardOpenBugKpiFromRows(bugs) {
+    const bugRows = Array.isArray(bugs) ? bugs : [];
+    const openCount = bugRows.filter((bug) => OPEN_BUG_STATUSES.has((bug.status || '').toLowerCase())).length;
+    setKpiValue('kpiOpenBugs', String(openCount));
+    touchKpiLastUpdated();
+}
+
+function updateDashboardExecutionKpiFromRows(rows) {
+    const executionRows = Array.isArray(rows) ? rows : [];
+    const failedExecutions = executionRows.filter((row) => (row.status || '').toLowerCase() === 'fail').length;
+    const failRate = executionRows.length > 0 ? ((failedExecutions / executionRows.length) * 100).toFixed(1) : '0.0';
+
+    setKpiValue('kpiRecentExecutions', String(executionRows.length));
+    setKpiValue('kpiExecutionMeta', `Fail rate ${failRate}%`);
+    touchKpiLastUpdated();
+}
+
+async function refreshDashboardExecutionKpiSample() {
+    if (!allTestCases || allTestCases.length === 0) {
+        updateDashboardExecutionKpiFromRows([]);
+        return;
+    }
+
+    try {
+        // Sample the first 20 cases for quick KPI feedback without blocking dashboard actions.
+        const sampleCases = allTestCases.slice(0, 20);
+        const historyRows = await Promise.all(
+            sampleCases.map(async (testCase) => {
+                try {
+                    const rows = await API.Execution.history(testCase.id);
+                    return Array.isArray(rows) ? rows : [];
+                } catch (error) {
+                    console.error(`Failed to load execution KPI history for case ${testCase.id}:`, error);
+                    return [];
+                }
+            })
+        );
+
+        const flattenedRows = historyRows.flat();
+        updateDashboardExecutionKpiFromRows(flattenedRows);
+    } catch (error) {
+        console.error('Failed to refresh execution KPI sample:', error);
+    }
+}
+
+async function refreshDashboardOpenBugKpi() {
+    try {
+        const bugs = await API.Bugs.list();
+        setDashboardOpenBugKpiFromRows(bugs);
+    } catch (error) {
+        console.error('Failed to refresh open bug KPI:', error);
+    }
+}
+
+async function refreshDashboardExecutiveKpis() {
+    updateDashboardCaseKpis();
+    await Promise.all([
+        refreshDashboardOpenBugKpi(),
+        refreshDashboardExecutionKpiSample()
+    ]);
 }
 
 // ============ Load Test Cases ============
@@ -146,6 +238,8 @@ async function loadTestCases(filters = {}) {
         const data = response.test_cases || [];
         allTestCases = data;
         filteredTestCases = data;
+        updateDashboardCaseKpis();
+        await loadBugAssignees();
         renderTestCasesTable();
     } catch (error) {
         console.error('Failed to load test cases:', error);
@@ -225,6 +319,13 @@ function setupEventListeners() {
 
     if (document.getElementById('refreshBugsBtn')) {
         document.getElementById('refreshBugsBtn').addEventListener('click', loadBugReportsView);
+        document.getElementById('createBugBtn').addEventListener('click', createBugReportFromForm);
+        document.getElementById('bugSearchInput').addEventListener('input', debounce(loadBugReportsView, 300));
+        document.getElementById('bugFilterStatus').addEventListener('change', loadBugReportsView);
+        document.getElementById('bugFilterPriority').addEventListener('change', loadBugReportsView);
+        document.getElementById('bugFilterSeverity').addEventListener('change', loadBugReportsView);
+        document.getElementById('bugSortBy').addEventListener('change', loadBugReportsView);
+        document.getElementById('bugMineOnly').addEventListener('change', loadBugReportsView);
     }
 
     if (document.getElementById('refreshAnalyticsBtn')) {
@@ -321,9 +422,19 @@ function setupModalHandlers() {
 function setupNavigationHandlers() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
-            e.preventDefault();
             const view = e.currentTarget.getAttribute('data-view');
-            switchView(view);
+            const href = e.currentTarget.getAttribute('href') || '';
+
+            // Internal dashboard tabs use data-view. Real links (e.g., suite page) should navigate normally.
+            if (view) {
+                e.preventDefault();
+                switchView(view);
+                return;
+            }
+
+            if (!href || href === '#') {
+                e.preventDefault();
+            }
         });
     });
 }
@@ -408,52 +519,115 @@ async function loadBugReportsView() {
     const body = document.getElementById('bugsTableBody');
     if (!body) return;
 
-    body.innerHTML = '<tr><td colspan="5" class="text-center">Loading bug reports...</td></tr>';
+    body.innerHTML = '<tr><td colspan="10" class="text-center">Loading bug reports...</td></tr>';
 
     try {
-        const { historyResults } = await fetchCasesAndExecutionHistory();
-        const bugRows = [];
-
-        historyResults.forEach(({ testCase, history }) => {
-            history.forEach((execution) => {
-                if (!execution.bug_ids) return;
-
-                const bugIds = execution.bug_ids
-                    .split(',')
-                    .map((id) => id.trim())
-                    .filter(Boolean);
-
-                bugIds.forEach((bugId) => {
-                    bugRows.push({
-                        bugId,
-                        testCaseId: testCase.test_case_id,
-                        testCaseTitle: testCase.title,
-                        executionId: execution.id,
-                        status: execution.status,
-                        executionDate: execution.execution_date,
-                    });
-                });
-            });
+        const bugs = await API.Bugs.list({
+            search: document.getElementById('bugSearchInput')?.value?.trim() || '',
+            status: document.getElementById('bugFilterStatus')?.value || '',
+            priority: document.getElementById('bugFilterPriority')?.value || '',
+            severity: document.getElementById('bugFilterSeverity')?.value || '',
+            sort_by: document.getElementById('bugSortBy')?.value || 'created_at',
+            mine_only: document.getElementById('bugMineOnly')?.checked ? 'true' : ''
         });
 
-        if (bugRows.length === 0) {
-            body.innerHTML = '<tr><td colspan="5" class="text-center">No linked bug reports found yet</td></tr>';
+        if (!bugs || bugs.length === 0) {
+            setDashboardOpenBugKpiFromRows([]);
+            body.innerHTML = '<tr><td colspan="10" class="text-center">No bug reports found</td></tr>';
             return;
         }
 
-        body.innerHTML = bugRows.map((row) => `
+        setDashboardOpenBugKpiFromRows(bugs);
+
+        body.innerHTML = bugs.map((bug) => `
             <tr>
-                <td><strong>${row.bugId}</strong></td>
-                <td>${row.testCaseId} - ${row.testCaseTitle}</td>
-                <td>${row.executionId}</td>
-                <td>${row.status || 'N/A'}</td>
-                <td>${row.executionDate ? new Date(row.executionDate).toLocaleString() : 'N/A'}</td>
+                <td><strong>${bug.bug_id}</strong></td>
+                <td>${bug.title}</td>
+                <td>${bug.priority}</td>
+                <td>${bug.severity}</td>
+                <td>${bug.status}</td>
+                <td>${bug.assigned_to_name || 'Unassigned'}</td>
+                <td>${bug.linked_test_case_identifier || 'N/A'}</td>
+                <td>${bug.attachment_count || 0}</td>
+                <td>${bug.created_at ? new Date(bug.created_at).toLocaleString() : 'N/A'}</td>
+                <td>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <select id="bugStatus_${bug.bug_id}" class="form-control" style="min-width: 150px;">
+                            <option value="new" ${bug.status === 'new' ? 'selected' : ''}>New</option>
+                            <option value="open" ${bug.status === 'open' ? 'selected' : ''}>Open</option>
+                            <option value="in_progress" ${bug.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="fixed" ${bug.status === 'fixed' ? 'selected' : ''}>Fixed</option>
+                            <option value="verified" ${bug.status === 'verified' ? 'selected' : ''}>Verified</option>
+                            <option value="closed" ${bug.status === 'closed' ? 'selected' : ''}>Closed</option>
+                            <option value="reopened" ${bug.status === 'reopened' ? 'selected' : ''}>Reopened</option>
+                            <option value="wont_fix" ${bug.status === 'wont_fix' ? 'selected' : ''}>Won't Fix</option>
+                            <option value="duplicate" ${bug.status === 'duplicate' ? 'selected' : ''}>Duplicate</option>
+                        </select>
+                        <button class="btn btn-sm btn-secondary" onclick="updateBugStatus('${bug.bug_id}')">Save</button>
+                    </div>
+                </td>
             </tr>
         `).join('');
     } catch (error) {
         console.error('Failed to load bug reports view:', error);
-        body.innerHTML = '<tr><td colspan="5" class="text-center">Failed to load bug reports</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" class="text-center">Failed to load bug reports</td></tr>';
         showNotification('Failed to load bug reports', 'error');
+    }
+}
+
+async function createBugReportFromForm() {
+    const title = document.getElementById('bugCreateTitle')?.value?.trim();
+    const description = document.getElementById('bugCreateDescription')?.value?.trim();
+    const steps = document.getElementById('bugCreateSteps')?.value?.trim();
+    const expected = document.getElementById('bugCreateExpected')?.value?.trim();
+    const actual = document.getElementById('bugCreateActual')?.value?.trim();
+
+    if (!title || !description || !steps || !expected || !actual) {
+        showNotification('Fill in title, description, steps, expected, and actual behavior', 'warning');
+        return;
+    }
+
+    try {
+        await API.Bugs.create({
+            title,
+            description,
+            steps_to_reproduce: steps,
+            expected_behavior: expected,
+            actual_behavior: actual,
+            priority: document.getElementById('bugCreatePriority').value,
+            severity: document.getElementById('bugCreateSeverity').value,
+            environment: document.getElementById('bugCreateEnvironment')?.value?.trim() || null,
+            affected_version: document.getElementById('bugCreateVersion')?.value?.trim() || null,
+            assigned_to_id: parseInt(document.getElementById('bugCreateAssignedTo')?.value) || null,
+            linked_test_case_id: parseInt(document.getElementById('bugCreateLinkedTestCase')?.value) || null,
+        });
+
+        ['bugCreateTitle', 'bugCreateDescription', 'bugCreateSteps', 'bugCreateExpected', 'bugCreateActual', 'bugCreateEnvironment', 'bugCreateVersion'].forEach((id) => {
+            const element = document.getElementById(id);
+            if (element) element.value = '';
+        });
+        document.getElementById('bugCreateAssignedTo').value = '';
+        document.getElementById('bugCreateLinkedTestCase').value = '';
+
+        showNotification('Bug report created', 'success');
+        await loadBugReportsView();
+        await refreshDashboardOpenBugKpi();
+    } catch (error) {
+        console.error('Failed to create bug report:', error);
+        showNotification(error.message || 'Failed to create bug report', 'error');
+    }
+}
+
+async function updateBugStatus(bugId) {
+    try {
+        const status = document.getElementById(`bugStatus_${bugId}`).value;
+        await API.Bugs.updateStatus(bugId, status);
+        showNotification(`Bug ${bugId} updated`, 'success');
+        await loadBugReportsView();
+        await refreshDashboardOpenBugKpi();
+    } catch (error) {
+        console.error('Failed to update bug status:', error);
+        showNotification(error.message || 'Failed to update bug status', 'error');
     }
 }
 
@@ -513,7 +687,7 @@ async function loadTemplates() {
     try {
         const category = document.getElementById('filterTemplateCategory').value;
         const templates = await API.Templates.list(category || null);
-        
+
         // Handle response - could be array or object with data property
         const templateArray = Array.isArray(templates) ? templates : (templates?.data || []);
         renderTemplates(templateArray);
@@ -532,7 +706,7 @@ function renderTemplates(templates) {
 
     // Handle null, undefined, or empty array
     const templateArray = templates && Array.isArray(templates) ? templates : [];
-    
+
     if (templateArray.length === 0) {
         grid.innerHTML = '<p class="text-center" style="padding: 40px; color: #666;">No templates available. Create templates from existing test cases.</p>';
         return;
@@ -690,6 +864,31 @@ async function loadTesters() {
         }
     } catch (error) {
         console.error('Failed to load testers:', error);
+    }
+}
+
+async function loadBugAssignees() {
+    try {
+        const users = await API.Bugs.getAssignees();
+        allBugAssignees = Array.isArray(users) ? users : [];
+
+        const assigneeSelect = document.getElementById('bugCreateAssignedTo');
+        if (assigneeSelect) {
+            const options = allBugAssignees.map((user) => (
+                `<option value="${user.id}">${user.full_name || user.email} (${user.role})</option>`
+            )).join('');
+            assigneeSelect.innerHTML = '<option value="">Unassigned</option>' + options;
+        }
+
+        const linkedCaseSelect = document.getElementById('bugCreateLinkedTestCase');
+        if (linkedCaseSelect) {
+            const options = allTestCases.map((testCase) => (
+                `<option value="${testCase.id}">${testCase.test_case_id} - ${testCase.title}</option>`
+            )).join('');
+            linkedCaseSelect.innerHTML = '<option value="">None</option>' + options;
+        }
+    } catch (error) {
+        console.error('Failed to load bug assignees:', error);
     }
 }
 
@@ -1236,6 +1435,7 @@ async function loadExecutionDashboardData() {
     try {
         await loadExecutionCaseSelectors();
         await renderTestRunsTable();
+        await refreshDashboardExecutionKpiSample();
     } catch (error) {
         console.error('Failed to load execution dashboard data:', error);
         showNotification('Failed to load execution module', 'error');
@@ -1284,6 +1484,7 @@ async function startExecutionFromSelection() {
         await loadExecutionSteps(testCaseId);
         startLocalExecutionTimer();
         await refreshExecutionHistoryFromSelection();
+        await refreshDashboardExecutionKpiSample();
         showNotification('Execution started', 'success');
     } catch (error) {
         console.error('Failed to start execution:', error);
@@ -1310,6 +1511,7 @@ async function reexecuteFromSelection() {
         await loadExecutionSteps(testCaseId);
         startLocalExecutionTimer();
         await refreshExecutionHistoryFromSelection();
+        await refreshDashboardExecutionKpiSample();
 
         if (response.previous_execution) {
             showNotification(`Re-execution started. Previous status: ${response.previous_execution.status}`, 'info');
@@ -1327,8 +1529,12 @@ async function loadExecutionSteps(testCaseId) {
     if (!tbody) return;
 
     try {
-        const tc = await API.TestCases.get(testCaseId);
-        activeExecutionSteps = tc.steps || [];
+        if (!activeExecutionId) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Start execution to load step snapshots</td></tr>';
+            return;
+        }
+
+        activeExecutionSteps = await API.Execution.getSteps(activeExecutionId);
 
         if (activeExecutionSteps.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center">No steps found for this test case</td></tr>';
@@ -1413,10 +1619,16 @@ async function failAndCreateBugForStep(stepId) {
     try {
         const result = await API.Execution.failAndCreateBug(activeExecutionId, stepId, {
             summary,
-            description: description || null
+            description: description || null,
+            affected_version: document.getElementById('bugCreateVersion')?.value?.trim() || null,
+            assigned_to_id: parseInt(document.getElementById('bugCreateAssignedTo')?.value) || null
         });
         document.getElementById(`stepStatus_${stepId}`).value = 'fail';
         await saveExecutionStep(stepId);
+        if (document.getElementById('bugsView')?.classList.contains('active')) {
+            await loadBugReportsView();
+        }
+        await refreshDashboardOpenBugKpi();
         showNotification(`Bug created: ${result.bug.id}`, 'success');
     } catch (error) {
         console.error('Fail and create bug failed:', error);
@@ -1512,6 +1724,7 @@ async function completeCurrentExecution() {
         stopLocalExecutionTimer();
         showNotification(`Execution completed: ${result.status}`, 'success');
         await refreshExecutionHistoryFromSelection();
+        await refreshDashboardExecutionKpiSample();
     } catch (error) {
         console.error('Complete execution failed:', error);
         showNotification(error.message || 'Failed to complete execution', 'error');
@@ -1544,7 +1757,7 @@ function stopLocalExecutionTimer() {
 async function refreshExecutionHistoryFromSelection() {
     const testCaseId = parseInt(document.getElementById('executionTestCaseSelect').value);
     if (!testCaseId) {
-        document.getElementById('executionHistoryBody').innerHTML = '<tr><td colspan="5" class="text-center">Select a test case to load history</td></tr>';
+        document.getElementById('executionHistoryBody').innerHTML = '<tr><td colspan="6" class="text-center">Select a test case to load history</td></tr>';
         return;
     }
 
@@ -1552,9 +1765,12 @@ async function refreshExecutionHistoryFromSelection() {
         const rows = await API.Execution.history(testCaseId);
         const body = document.getElementById('executionHistoryBody');
         if (!rows || rows.length === 0) {
-            body.innerHTML = '<tr><td colspan="5" class="text-center">No execution history found</td></tr>';
+            updateDashboardExecutionKpiFromRows([]);
+            body.innerHTML = '<tr><td colspan="6" class="text-center">No execution history found</td></tr>';
             return;
         }
+
+        updateDashboardExecutionKpiFromRows(rows);
 
         body.innerHTML = rows.map(r => `
             <tr>
@@ -1562,12 +1778,41 @@ async function refreshExecutionHistoryFromSelection() {
                 <td>${r.status}</td>
                 <td>${r.execution_duration ?? 'N/A'}</td>
                 <td>${r.pass_count}/${r.fail_count}/${r.blocked_count}/${r.skipped_count}</td>
-                <td>${new Date(r.execution_date).toLocaleString()}</td>
+                <td>${r.execution_date ? new Date(r.execution_date).toLocaleString() : 'In Progress'}</td>
+                <td><button class="btn btn-sm btn-secondary" onclick="compareExecutionHistory(${r.id})">Compare</button></td>
             </tr>
         `).join('');
     } catch (error) {
         console.error('Failed to load execution history:', error);
-        document.getElementById('executionHistoryBody').innerHTML = '<tr><td colspan="5" class="text-center">Failed to load history</td></tr>';
+        document.getElementById('executionHistoryBody').innerHTML = '<tr><td colspan="6" class="text-center">Failed to load history</td></tr>';
+    }
+}
+
+async function compareExecutionHistory(executionId) {
+    const body = document.getElementById('executionComparisonBody');
+    if (!body) return;
+
+    body.innerHTML = '<tr><td colspan="5" class="text-center">Loading comparison...</td></tr>';
+
+    try {
+        const result = await API.Execution.compare(executionId);
+        if (!result.previous_execution) {
+            body.innerHTML = '<tr><td colspan="5" class="text-center">No previous execution available for comparison</td></tr>';
+            return;
+        }
+
+        body.innerHTML = result.comparison.map((row) => `
+            <tr>
+                <td>${row.step_number}</td>
+                <td>${row.action || ''}</td>
+                <td>${row.expected_result || ''}</td>
+                <td>${row.current?.status || 'n/a'}${row.current?.actual_result ? `<br><small>${row.current.actual_result}</small>` : ''}</td>
+                <td>${row.previous?.status || 'n/a'}${row.previous?.actual_result ? `<br><small>${row.previous.actual_result}</small>` : ''}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Failed to compare execution history:', error);
+        body.innerHTML = '<tr><td colspan="5" class="text-center">Failed to load comparison</td></tr>';
     }
 }
 

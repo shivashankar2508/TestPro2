@@ -180,6 +180,18 @@ async def list_users(
             detail=f"Failed to list users: {str(e)}"
         )
 
+@router.get("/testers", response_model=List[UserDetailResponse])
+async def list_testers_for_assignment(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List active tester users for assignment dropdowns (available to any authenticated user)."""
+    users = db.query(User).filter(
+        User.role == RoleEnum.TESTER.value,
+        User.status == UserStatusEnum.ACTIVE.value
+    ).order_by(User.full_name.asc()).all()
+    return users
+
 @router.get("/{user_id}", response_model=UserDetailResponse)
 async def get_user(
     user_id: int,
